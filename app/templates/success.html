@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#E2725B">
+    <link rel="apple-touch-icon" href="/static/images/card_icon.png">
+    <title>Welcome to the Morning</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
+
+        :root {
+            --primary: #E2725B;
+            --text-main: #4A2E20;
+            --text-light: #8A5A44;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Lora', serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background-color: #fcf6f0;
+        }
+
+        .bg-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+            filter: brightness(0.9) contrast(1.05);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, rgba(226, 114, 91, 0.2) 0%, rgba(255, 203, 164, 0.15) 100%);
+            z-index: 1;
+        }
+
+        .page-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 2rem 20px;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            padding: 4rem 3rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            animation: cinematicFadeIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            opacity: 0;
+            transform: scale(0.95);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .glass-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('/static/images/card_icon.png') no-repeat center center;
+            background-size: cover;
+            mix-blend-mode: multiply;
+            opacity: 0.42;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        @keyframes cinematicFadeIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        h1 {
+            color: var(--primary);
+            font-family: 'Playfair Display', serif;
+            font-size: 2.6rem;
+            font-style: italic;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            letter-spacing: 0.5px;
+        }
+
+        p {
+            color: var(--text-light);
+            font-size: 1.15rem;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
+
+        .icon {
+            width: 110px;
+            margin: 0 auto 1.5rem auto;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
+            display: block;
+            animation: gentleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .close-btn {
+            margin-top: 2rem;
+            padding: 1.1rem;
+            border-radius: 12px;
+            border: none;
+            background: rgba(255, 140, 66, 0.15);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            border: 1px solid rgba(255, 140, 66, 0.3);
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 140, 66, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .close-hint {
+            display: none;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-top: 1rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+<img src="/static/images/vibrant_sunrise.png?v=1" alt="Vibrant Sunrise" class="bg-image">
+<div class="overlay"></div>
+
+<div class="page-wrapper">
+    <div class="glass-card">
+        <h1>Awesome! Have a wonderful day, {{ name }}!</h1>
+        <p>Your mornings are set. Expect a warm kiss of inspiration and the closest spots serving {{ drink }} tomorrow at 5:00 AM.</p>
+        <button class="close-btn" onclick="window.location.href='/'">Return to Sign On</button>
+    </div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/service-worker.js')
+        .then(() => console.log('Service Worker Registered'));
+    }
+</script>
+
+</body>
+</html>

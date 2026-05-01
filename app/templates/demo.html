@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIPSCOUTS - Interactive Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #9AFF67;
+            --salmon: #FFB1B1;
+            --black: #000000;
+            --white: #FFFFFF;
+            --light-grey: #F2F2F2;
+            --border: 1px solid var(--black);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--black);
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+        }
+
+        .mobile-container {
+            width: 100%;
+            max-width: 375px;
+            min-height: 100vh;
+            background: var(--white);
+            position: relative;
+            padding-bottom: 90px;
+            overflow-x: hidden;
+            border-left: var(--border);
+            border-right: var(--border);
+        }
+
+        /* HEADER */
+        header {
+            position: sticky;
+            top: 0;
+            background: var(--white);
+            border-bottom: var(--border);
+            padding: 16px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+        .location-badge { font-size: 10px; font-weight: 900; background: var(--neon-green); padding: 4px 8px; border: var(--border); border-radius: 99px; }
+
+        /* VIEW DISPLAY LOGIC */
+        .view-section { display: none; }
+        .view-section.active-view { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* COMMON UI COMPONENTS */
+        .search-container { padding: 16px; padding-bottom: 0; }
+        .search-input { width: 100%; background: var(--light-grey); border: var(--border); padding: 12px; font-size: 14px; font-weight: 700; outline: none; border-radius: 0; }
+        .search-input:focus { background: var(--white); border: 2px solid var(--black); }
+        
+        .filter-strip { display: flex; overflow-x: scroll; scrollbar-width: none; border-bottom: var(--border); margin-top: 16px; }
+        .filter-strip::-webkit-scrollbar { display: none; }
+        .filter-btn { border: none; border-right: var(--border); background: var(--white); padding: 10px 16px; font-size: 11px; font-weight: 900; white-space: nowrap; cursor: pointer; transition: all 0.2s; }
+        .filter-btn.active { background: var(--black); color: var(--white); }
+
+        /* EXPLORE STYLES */
+        .hero-section { display: flex; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x mandatory; border-bottom: 1px solid var(--black); }
+        .hero-section::-webkit-scrollbar { display: none; }
+        .hero-card { min-width: 85vw; height: 420px; scroll-snap-align: center; border-right: 1px solid var(--black); position: relative; display: flex; flex-direction: column; background: var(--neon-green); cursor: pointer; }
+        .hero-card.alt-bg { background: var(--salmon); }
+        .vertical-tag-strip { position: absolute; left: 0; top: 0; bottom: 0; width: 32px; border-right: 1px solid var(--black); display: flex; align-items: center; justify-content: center; }
+        .vertical-text { transform: rotate(-90deg); white-space: nowrap; font-size: 14px; font-weight: 900; letter-spacing: 2px; }
+        .hero-content { margin-left: 32px; flex-grow: 1; display: flex; flex-direction: column; }
+        .hero-image-wrapper { flex-grow: 1; padding: 12px; display: flex; align-items: flex-start; }
+        .hero-image { width: 100%; height: 100%; object-fit: cover; background-position: center; border: 1px solid var(--black); filter: grayscale(100%) contrast(1.1); transition: filter 0.3s; }
+        .hero-card:active .hero-image, .hero-card:hover .hero-image { filter: grayscale(0%); }
+        .hero-details { padding: 12px; padding-top: 0; position: relative; }
+        .hero-meta { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .hero-title { font-size: 28px; font-weight: 900; line-height: 0.9; margin: 0; word-wrap: break-word; margin-bottom: 4px; }
+
+        .circle-badge { position: absolute; right: 12px; bottom: 60px; width: 80px; height: 80px; background: var(--white); border-radius: 50%; border: 1px solid var(--black); display: flex; align-items: center; justify-content: center; animation: rotate 10s linear infinite; z-index: 10; }
+        .circle-badge svg { width: 70px; height: 70px; }
+        .circle-badge text { font-size: 10px; font-weight: 900; fill: var(--black); letter-spacing: 1px; }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+        .discover-header { background: var(--black); color: var(--white); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: var(--border); }
+        .discover-header-title { font-size: 12px; font-weight: 900; letter-spacing: 1px; }
+        .discover-count { font-size: 10px; font-weight: 700; background: var(--white); color: var(--black); padding: 2px 6px; border-radius: 2px; }
+
+        .discovery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+        .grid-item { border: var(--border); display: flex; flex-direction: column; background: var(--white); transition: transform 0.2s; cursor: pointer; }
+        .grid-item:active { transform: scale(0.98); }
+        .thumbnail { width: 100%; aspect-ratio: 1 / 1; border-bottom: var(--border); background-size: cover; background-position: center; background-color: var(--light-grey); filter: grayscale(100%); transition: filter 0.3s; }
+        .grid-item:active .thumbnail { filter: grayscale(0%); }
+        .item-details { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
+        .drink-name { font-size: 16px; font-weight: 900; margin-bottom: 4px; line-height: 1.1; }
+        .cafe-name { font-size: 12px; font-weight: 400; opacity: 0.7; margin-bottom: 12px; }
+        .price-tag-container { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
+        .price-tag { background: var(--neon-green); padding: 2px 4px; border: var(--border); font-size: 14px; font-weight: 700; display: inline-block; width: fit-content; }
+        .distance-tag { font-size: 10px; font-weight: 700; }
+
+        /* HEART ICON SPECIFIC */
+        .heart-icon { font-size: 18px; color: var(--salmon); text-shadow: 1px 1px 0 #000; }
+        .collection-card { background: var(--white); border: var(--border); padding: 20px; margin: 16px; cursor: pointer; }
+        .collection-card:active { background: var(--light-grey); }
+
+        /* PROFILE STYLES */
+        .profile-hdr { padding: 32px 16px; border-bottom: var(--border); text-align: center; background: var(--light-grey); }
+        .profile-avatar { width: 80px; height: 80px; background: var(--neon-green); border: var(--border); border-radius: 50%; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; }
+        .profile-name { font-size: 24px; font-weight: 900; }
+        .profile-stats { display: grid; grid-template-columns: 1fr 1fr; border-bottom: var(--border); }
+        .stat-box { padding: 20px; text-align: center; border-right: var(--border); }
+        .stat-box:last-child { border-right: none; }
+        .stat-num { font-size: 28px; font-weight: 900; color: var(--neon-green); text-shadow: 1px 1px 0 #000; }
+        .stat-label { font-size: 10px; font-weight: 700; margin-top: 4px; }
+        .badge-scroll { display: flex; overflow-x: scroll; padding: 16px; gap: 12px; border-bottom: var(--border); }
+        .badge-item { width: 60px; height: 60px; border: var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; background: var(--salmon); }
+        .settings-list { list-style: none; }
+        .settings-item { padding: 20px 16px; border-bottom: var(--border); font-size: 14px; font-weight: 900; display: flex; justify-content: space-between; cursor: pointer; background: var(--white); }
+        .settings-item:active { background: var(--light-grey); color: var(--salmon); }
+
+        /* MAP STYLES */
+        .map-wrapper { height: 60vh; background-image: url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800&auto=format&fit=crop'); background-size: cover; background-position: center; filter: grayscale(100%) contrast(1.2); position: relative; border-bottom: var(--border); }
+        .map-pin { position: absolute; width: 24px; height: 24px; background: var(--neon-green); border: var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; cursor: pointer; box-shadow: 2px 2px 0 var(--black); }
+        .bottom-sheet { padding: 16px; background: var(--white); }
+        .map-list-item { display: flex; gap: 12px; padding: 12px; border: var(--border); margin-bottom: 12px; cursor: pointer; }
+        .map-list-item:active { background: var(--light-grey); }
+        .map-list-img { width: 60px; height: 60px; background-size: cover; border: var(--border); filter: grayscale(100%); }
+        .map-vibe-tag { background: var(--black); color: var(--white); font-size: 9px; padding: 2px 4px; display: inline-block; margin-top: 4px; }
+
+        /* BOTTOM NAVIGATION */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 375px; height: 70px; background: var(--white); border-top: var(--border); border-left: var(--border); border-right: var(--border); display: grid; grid-template-columns: repeat(4, 1fr); z-index: 200; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-right: var(--border); cursor: pointer; transition: background 0.2s; }
+        .nav-item:last-child { border-right: none; }
+        .nav-item.active { background: var(--neon-green); }
+        .nav-icon { width: 24px; height: 24px; border: 2px solid var(--black); display: flex; align-items: center; justify-content: center; background: transparent; }
+        .icon-explore { width: 18px; height: 18px; }
+        .icon-map { border-radius: 50%; width: 18px; height: 18px; }
+        .icon-saved { transform: rotate(45deg); width: 14px; height: 14px; margin-bottom: 4px; }
+        .icon-profile { border-style: dashed; width: 18px; height: 18px; }
+        .nav-item.active .nav-icon { background: var(--black); }
+        .nav-label { font-size: 10px; font-weight: 900; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    
+    <!-- EXPLORE TAB -->
+    <div id="explore-view" class="view-section active-view">
+        <header>
+            <h1 class="logo">SIPSCOUTS</h1>
+            <div class="location-badge">TOKYO / SHIBUYA</div>
+        </header>
+
+        <div class="search-container"><input type="text" class="search-input" placeholder="SEARCH DRINKS, CAFES, VIBES..."></div>
+
+        <div class="filter-strip">
+            <button class="filter-btn active">NEARBY</button>
+            <button class="filter-btn">COLD BREW</button>
+            <button class="filter-btn">MATCHA</button>
+            <button class="filter-btn">V60</button>
+            <button class="filter-btn">OAT MILK</button>
+        </div>
+
+        <div class="hero-section">
+            <div class="hero-card" onclick="alert('Viewing OMOTESANDO KOFFEE')">
+                <div class="vertical-tag-strip"><span class="vertical-text">SIP OF THE DAY</span></div>
+                <div class="hero-content">
+                    <div class="hero-image-wrapper">
+                        <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=800" alt="Coffee" class="hero-image">
+                    </div>
+                    <div class="hero-details">
+                        <div class="circle-badge">
+                            <svg viewBox="0 0 100 100"><path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" /><text><textPath href="#circlePath" startOffset="0%">TOP PICK • TOP PICK • TOP PICK • </textPath></text></svg>
+                        </div>
+                        <div class="hero-meta"><span>OMOTESANDO KOFFEE</span><span>0.2 MI</span></div>
+                        <h2 class="hero-title">ICED<br>KOFFEE</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-card alt-bg" onclick="alert('Viewing LEAVES COFFEE')">
+                <div class="vertical-tag-strip"><span class="vertical-text">URBAN EXPLORER</span></div>
+                <div class="hero-content">
+                    <div class="hero-image-wrapper">
+                        <img src="https://images.unsplash.com/photo-1551829142-d9b8e2f49733?q=80&w=800" alt="Coffee 2" class="hero-image">
+                    </div>
+                    <div class="hero-details">
+                        <div class="hero-meta"><span>LEAVES COFFEE</span><span>1.4 MI</span></div>
+                        <h2 class="hero-title">YUZU<br>AMERICANO</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="discover-header">
+            <span class="discover-header-title">DISCOVER NEARBY</span>
+            <span class="discover-count">14 FOUND</span>
+        </div>
+
+        <div class="discovery-grid">
+            <div class="grid-item" onclick="alert('Added to wishlist!')">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="drink-name">DIRTY MATCHA</div>
+                    <div class="cafe-name">ONIBUS COFFEE</div>
+                    <div class="price-tag-container">
+                        <div class="price-tag">$6.50</div>
+                        <div class="distance-tag">0.4 MI</div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-item" onclick="alert('View details')">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="drink-name">POUR OVER (V60)</div>
+                    <div class="cafe-name">KOFFEE MAMEYA</div>
+                    <div class="price-tag-container">
+                        <div class="price-tag">$8.00</div>
+                        <div class="distance-tag">0.8 MI</div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-item" onclick="alert('View details')">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1572442388746-b6058dbaf7b6?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="drink-name">ESPRESSO SODA</div>
+                    <div class="cafe-name">FUGLEN TOKYO</div>
+                    <div class="price-tag-container">
+                        <div class="price-tag">$7.00</div>
+                        <div class="distance-tag">1.1 MI</div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-item" onclick="alert('Added to wishlist!')">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="drink-name">OAT CORTADO</div>
+                    <div class="cafe-name">ABOUT LIFE COFFEE</div>
+                    <div class="price-tag-container">
+                        <div class="price-tag">$5.50</div>
+                        <div class="distance-tag">1.5 MI</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAP TAB -->
+    <div id="map-view" class="view-section">
+        <header>
+            <h1 class="logo">RADAR</h1>
+            <div class="location-badge">TARGETING</div>
+        </header>
+        <div class="map-wrapper">
+            <div class="map-pin" style="top:30%; left:20%;" onclick="alert('ONIBUS COFFEE')">☕</div>
+            <div class="map-pin" style="top:50%; left:60%;" onclick="alert('FUGLEN TOKYO')">🍵</div>
+            <div class="map-pin" style="top:70%; left:40%;" onclick="alert('KOFFEE MAMEYA')">🥤</div>
+            <!-- Mock user location -->
+            <div class="map-pin" style="top:55%; left:45%; background: var(--black); color: var(--neon-green);">📡</div>
+        </div>
+        <div class="bottom-sheet">
+            <h2 style="font-size: 14px; font-weight: 900; margin-bottom: 12px;">NEARBY DROPS</h2>
+            
+            <div class="map-list-item" onclick="alert('Routing to ONIBUS')">
+                <div class="map-list-img" style="background-image:url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400')"></div>
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 900;">ONIBUS COFFEE</h3>
+                    <div style="font-size: 10px; font-weight: 700; margin-top: 2px;">0.4 MILES • OPEN UNTIL 6PM</div>
+                    <span class="map-vibe-tag">EXPERTS ONLY</span>
+                </div>
+            </div>
+
+            <div class="map-list-item" onclick="alert('Routing to FUGLEN')">
+                <div class="map-list-img" style="background-image:url('https://images.unsplash.com/photo-1572442388746-b6058dbaf7b6?q=80&w=400')"></div>
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 900;">FUGLEN TOKYO</h3>
+                    <div style="font-size: 10px; font-weight: 700; margin-top: 2px;">1.1 MILES • OPEN UNTIL 10PM</div>
+                    <span class="map-vibe-tag" style="background:var(--salmon); color:var(--black);">VIBE CHECK</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVED TAB -->
+    <div id="saved-view" class="view-section">
+        <header>
+            <h1 class="logo">VAULT</h1>
+            <div class="location-badge">YOUR GEAR</div>
+        </header>
+        <div class="filter-strip">
+            <button class="filter-btn active">ALL ITEMS</button>
+            <button class="filter-btn">VISITED</button>
+            <button class="filter-btn">WISHLIST</button>
+            <button class="filter-btn">HYPE BEANS</button>
+        </div>
+
+        <div class="collection-card" onclick="alert('Opening Wishlist')">
+            <h2 style="font-size: 24px; font-weight: 900;">TO TRY NEXT</h2>
+            <p style="font-size: 12px; font-weight: 700; margin-top: 4px;">4 DRINKS SAVED</p>
+        </div>
+
+        <div class="discover-header">
+            <span class="discover-header-title">YOUR BOOKMARKS</span>
+        </div>
+
+        <div class="discovery-grid">
+            <div class="grid-item">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="price-tag-container" style="margin-bottom:auto; margin-top: 0;">
+                        <span class="heart-icon">❤️</span>
+                    </div>
+                    <div class="drink-name" style="margin-top: 8px;">OAT CORTADO</div>
+                    <div class="cafe-name">ABOUT LIFE COFFEE</div>
+                </div>
+            </div>
+            <div class="grid-item">
+                <div class="thumbnail" style="background-image: url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400');"></div>
+                <div class="item-details">
+                    <div class="price-tag-container" style="margin-bottom:auto; margin-top: 0;">
+                        <span class="heart-icon">❤️</span>
+                    </div>
+                    <div class="drink-name" style="margin-top: 8px;">DIRTY MATCHA</div>
+                    <div class="cafe-name">ONIBUS COFFEE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div id="profile-view" class="view-section">
+        <header>
+            <h1 class="logo">DOSSIER</h1>
+            <div class="location-badge">AGENT STATUS</div>
+        </header>
+        <div class="profile-hdr">
+            <div class="profile-avatar">JC</div>
+            <h2 class="profile-name">JUSTIN COLLEY</h2>
+            <p style="font-size: 12px; font-weight: 700; margin-top: 4px;">MEMBER SINCE '26</p>
+        </div>
+        
+        <div class="profile-stats">
+            <div class="stat-box">
+                <div class="stat-num">42</div>
+                <div class="stat-label">DRINKS TRIED</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num" style="color:var(--salmon)">14</div>
+                <div class="stat-label">CAFES VISITED</div>
+            </div>
+        </div>
+
+        <!-- Badges -->
+        <h3 style="font-size: 12px; font-weight: 900; padding: 16px; border-bottom: var(--border);">ACHIEVEMENTS</h3>
+        <div class="badge-scroll">
+            <div class="badge-item">☕</div>
+            <div class="badge-item" style="background:var(--neon-green)">🔥</div>
+            <div class="badge-item" style="background:var(--light-grey)">🧊</div>
+            <div class="badge-item" style="background:var(--white)">🎖️</div>
+        </div>
+
+        <ul class="settings-list">
+            <li class="settings-item" onclick="alert('Opening Preferences')"><span>PREFERENCES</span><span>→</span></li>
+            <li class="settings-item" onclick="alert('Opening Privacy')"><span>PRIVACY & DATA</span><span>→</span></li>
+            <li class="settings-item" onclick="alert('Logging out...')"><span style="color:var(--salmon)">LOG OUT</span><span>→</span></li>
+        </ul>
+    </div>
+
+    <!-- BOTTOM NAVIGATION FIXED -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('explore-view', this)">
+            <div class="nav-icon"><div class="icon-explore"></div></div>
+            <span class="nav-label">EXPLORE</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('map-view', this)">
+            <div class="nav-icon"><div class="icon-map"></div></div>
+            <span class="nav-label">MAP</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('saved-view', this)">
+            <div class="nav-icon" style="border:none;"><div class="icon-saved" style="border: 2px solid var(--black)"></div></div>
+            <span class="nav-label">SAVED</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile-view', this)">
+            <div class="nav-icon"><div class="icon-profile"></div></div>
+            <span class="nav-label">PROFILE</span>
+        </div>
+    </nav>
+
+</div>
+
+<script>
+    // Simple mock logic to switch tabs interactively
+    function switchTab(viewId, element) {
+        // 1. Hide all views
+        const views = document.querySelectorAll('.view-section');
+        views.forEach(view => {
+            view.classList.remove('active-view');
+        });
+
+        // 2. Remove active class from all nav items
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // 3. Show targeted view
+        document.getElementById(viewId).classList.add('active-view');
+
+        // 4. Set current nav item to active
+        element.classList.add('active');
+    }
+</script>
+
+</body>
+</html>
