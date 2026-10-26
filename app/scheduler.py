@@ -131,8 +131,7 @@ def daily_dispatch_job(timezone_str: str):
             # Sort closest to furthest radially
             nearby_cafes.sort(key=lambda x: x["distance_miles"])
             
-            message = build_daily_message(user.name, quote_data, nearby_cafes)
-            send_sms(user.phone_number, message)
+            logger.info(f"Daily digest prepared for {user.name}: {len(nearby_cafes)} nearby cafes.")
             
     finally:
         db.close()

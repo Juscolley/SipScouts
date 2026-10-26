@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 import requests
 from dotenv import load_dotenv
 
@@ -9,7 +9,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def _is_configured(val: str | None) -> bool:
+def _is_configured(val: Optional[str]) -> bool:
     return bool(val and val.strip() and val.strip().lower() != "placeholder")
 
 

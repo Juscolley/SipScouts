@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+sqlalchemy
 sqlmodel
 python-dotenv
 requests
@@ -10,3 +11,7 @@ yelpapi
 googlemaps
 apscheduler
 supabase
+jinja2
+python-multipart
+pytz
+beautifulsoup4

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 import requests
 from dotenv import load_dotenv
 from app.services.discovery import discover_cafes
@@ -11,7 +11,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def _is_configured(val: str | None) -> bool:
+def _is_configured(val: Optional[str]) -> bool:
     return bool(val and val.strip() and val.strip().lower() != "placeholder")
 
 

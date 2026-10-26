@@ -58,8 +58,8 @@ async def ping():
 async def search_venues(
     drink: str = "",
     ingredient: str = "",
-    lat: float | None = None,
-    lng: float | None = None,
+    lat: float = None,
+    lng: float = None,
     zip_code: str = "",
 ):
     """

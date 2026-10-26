@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from app import models
 from app.database import SessionLocal
@@ -26,7 +26,7 @@ _SEARCH_CACHE: Dict[Tuple[str, float, float], Tuple[float, List[Dict]]] = {}
 _SEARCH_CACHE_TTL = 600  # 10 minutes
 
 
-def _normalize_venue(raw: Dict, default_tag: str) -> Dict | None:
+def _normalize_venue(raw: Dict, default_tag: str) -> Optional[Dict]:
     name = (raw.get("name") or "").strip()
     lat = raw.get("lat") if raw.get("lat") is not None else raw.get("latitude")
     lng = raw.get("lng") if raw.get("lng") is not None else raw.get("longitude")
