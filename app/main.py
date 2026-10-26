@@ -55,52 +55,56 @@ async def ping():
     return {"message": "pong from FastAPI backend"}
 
 @app.get("/api/search")
-async def search_venues(drink: str = "", ingredient: str = ""):
+async def search_venues(
+    drink: str = "",
+    ingredient: str = "",
+    lat: float | None = None,
+    lng: float | None = None,
+    zip_code: str = "",
+):
     """
-    Discovery search endpoint.
-    Currently returns placeholder results. Will integrate scrapers in next phase.
+    Live Multi-Source Discovery Search Endpoint.
+    Runs Google Places, Yelp, Instagram/TikTok, OpenStreetMap, Reddit, and X/Twitter
+    in parallel within a 10–12s window with Zero-Drop background caching.
     """
-    sample_venues = []
-    if drink or ingredient:
-        sample_venues = [
-            {
-                "id": "1",
-                "name": "The Hidden Grind",
-                "address": "142 Orchard St, New York, NY 10002",
-                "type": "cafe",
-                "lat": 40.7223,
-                "lng": -73.9887,
-                "tags": [drink or ingredient, "specialty coffee", "cozy"]
-            },
-            {
-                "id": "2",
-                "name": "Velvet Espresso",
-                "address": "78 Bedford Ave, Brooklyn, NY 11211",
-                "type": "cafe",
-                "lat": 40.7195,
-                "lng": -73.9565,
-                "tags": [drink or ingredient, "pour over", "local roast"]
-            },
-            {
-                "id": "3",
-                "name": "The Nocturne Bar",
-                "address": "310 Spring St, New York, NY 10013",
-                "type": "bar",
-                "lat": 40.7263,
-                "lng": -74.0058,
-                "tags": [drink or ingredient, "craft cocktails", "intimate"]
-            },
-        ]
+    from app.services.geocode_service import geocode_zip
+    from app.services.scraper_orchestrator import orchestrate_search
+
+    search_lat = lat
+    search_lng = lng
+    city_name = ""
+
+    if (search_lat is None or search_lng is None) and zip_code:
+        g_lat, g_lon, g_city, _ = geocode_zip(zip_code)
+        if g_lat is not None and g_lon is not None:
+            search_lat, search_lng = g_lat, g_lon
+            city_name = g_city or ""
+
+    # Default to NYC coordinates if browser geolocation is off and no zip code was given
+    if search_lat is None or search_lng is None:
+        search_lat = 40.7223
+        search_lng = -73.9887
+
+    venues = await orchestrate_search(
+        drink=drink,
+        ingredient=ingredient,
+        lat=search_lat,
+        lon=search_lng,
+    )
 
     # Log event to Supabase analytics (non-blocking, anonymous)
     from app.services.supabase_service import log_search_event
     log_search_event(
         drink=drink,
         ingredient=ingredient,
-        result_count=len(sample_venues),
+        city=city_name,
+        zip_code=zip_code,
+        latitude=search_lat,
+        longitude=search_lng,
+        result_count=len(venues),
     )
 
-    return {"venues": sample_venues, "count": len(sample_venues)}
+    return {"venues": venues, "count": len(venues)}
 
 @app.post("/register")
 async def register_user(

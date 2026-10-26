@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
@@ -25,9 +25,30 @@ export default function DiscoverPage() {
   const [venues, setVenues] = useState<Venue[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [statusIndex, setStatusIndex] = useState(0)
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn } = useBookmarks()
+
+  const queryLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'your perfect sip'
+  const scoutingMessages = [
+    `📍 Scouting nearby cafés & bars for "${queryLabel}"…`,
+    `📸 Checking local Instagram & TikTok posts for "${queryLabel}"…`,
+    `⭐ Cross-checking Google Places & Yelp menus and reviews…`,
+    `💬 Scanning neighborhood Reddit threads for hidden gems…`,
+    `🗺️ Ranking discovered spots by distance from you…`,
+  ]
+
+  useEffect(() => {
+    if (!loading) {
+      setStatusIndex(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setStatusIndex(prev => (prev + 1) % scoutingMessages.length)
+    }, 2200)
+    return () => clearInterval(interval)
+  }, [loading, scoutingMessages.length])
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -115,8 +136,14 @@ export default function DiscoverPage() {
             </div>
 
             {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>
+              <div className="glass" role="status" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem', textAlign: 'center', gap: '1rem' }}>
                 <div className="spinner" />
+                <p style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', margin: 0, transition: 'opacity 0.3s ease' }}>
+                  {scoutingMessages[statusIndex]}
+                </p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Deep-scouting menus & social posts so no hidden local gem is skipped…
+                </p>
               </div>
             ) : venues.length === 0 ? (
               <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
