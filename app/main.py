@@ -74,11 +74,11 @@ async def search_venues(
     search_lng = lng
     city_name = ""
 
-    if (search_lat is None or search_lng is None) and zip_code:
-        g_lat, g_lon, g_city, _ = geocode_zip(zip_code)
+    if zip_code and zip_code.strip():
+        g_lat, g_lon, g_city, _ = geocode_zip(zip_code.strip())
         if g_lat is not None and g_lon is not None:
             search_lat, search_lng = g_lat, g_lon
-            city_name = g_city or ""
+            city_name = g_city or zip_code.strip()
 
     # Default to NYC coordinates if browser geolocation is off and no zip code was given
     if search_lat is None or search_lng is None:
@@ -104,7 +104,11 @@ async def search_venues(
         result_count=len(venues),
     )
 
-    return {"venues": venues, "count": len(venues)}
+    return {
+        "venues": venues,
+        "count": len(venues),
+        "center": {"lat": search_lat, "lng": search_lng, "label": city_name},
+    }
 
 @app.post("/register")
 async def register_user(

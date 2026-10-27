@@ -23,6 +23,8 @@ interface Venue {
 export default function DiscoverPage() {
   const [drink, setDrink] = useState('')
   const [ingredient, setIngredient] = useState('')
+  const [locationInput, setLocationInput] = useState('')
+  const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number } | null>(null)
   const [venues, setVenues] = useState<Venue[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -59,15 +61,22 @@ export default function DiscoverPage() {
       const params = new URLSearchParams()
       if (drink) params.set('drink', drink)
       if (ingredient) params.set('ingredient', ingredient)
-      if (geo.latitude) params.set('lat', String(geo.latitude))
-      if (geo.longitude) params.set('lng', String(geo.longitude))
+      if (locationInput.trim()) {
+        params.set('zip_code', locationInput.trim())
+      } else if (geo.latitude && geo.longitude) {
+        params.set('lat', String(geo.latitude))
+        params.set('lng', String(geo.longitude))
+      }
 
       const res = await fetch(`/api/search?${params.toString()}`)
       const data = await res.json()
       let results: Venue[] = data.venues ?? []
-      if (geo.latitude && geo.longitude) {
+      const refLat: number | null = data.center?.lat ?? geo.latitude
+      const refLng: number | null = data.center?.lng ?? geo.longitude
+      if (refLat && refLng) {
+        setSearchCenter({ lat: refLat, lng: refLng })
         results = results
-          .map(v => ({ ...v, distanceKm: distanceKm(geo.latitude!, geo.longitude!, v.lat, v.lng) }))
+          .map(v => ({ ...v, distanceKm: distanceKm(refLat, refLng, v.lat, v.lng) }))
           .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
       }
       setVenues(results)
@@ -105,21 +114,71 @@ export default function DiscoverPage() {
             Find your next perfect sip
           </h1>
           <p className="hero-sub">
-            Search by drink or ingredient — we'll surface hidden gems
-            {geo.latitude ? ' sorted by distance from you.' : ' near you.'}
+            Search by drink or ingredient — we'll surface hidden gems sorted by distance from you.
           </p>
-          {geo.latitude && <p className="hero-note">📍 Using your location</p>}
-          {geo.error && <p className="hero-note">📍 Location unavailable — results won't be sorted by distance.</p>}
+          {geo.source === 'gps' && (
+            <p className="hero-note">📍 Using your exact GPS location</p>
+          )}
+          {geo.source === 'ip' && (
+            <p className="hero-note">
+              📍 Near {geo.cityLabel || 'your area'}{' '}
+              <button
+                type="button"
+                onClick={geo.requestLocation}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.45)',
+                  color: '#fff',
+                  borderRadius: 99,
+                  padding: '0.15rem 0.6rem',
+                  fontSize: '0.75rem',
+                  marginLeft: '0.35rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Use Exact GPS
+              </button>
+            </p>
+          )}
+          {!geo.latitude && !geo.loading && (
+            <p className="hero-note">
+              <button
+                type="button"
+                onClick={geo.requestLocation}
+                style={{
+                  background: 'rgba(255,255,255,0.22)',
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  color: '#fff',
+                  borderRadius: 99,
+                  padding: '0.25rem 0.75rem',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                }}
+              >
+                📍 Tap to Enable Location (or enter Zip / City below)
+              </button>
+            </p>
+          )}
         </section>
 
-        <form onSubmit={handleSearch} style={{ maxWidth: 720, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 220px' }}>
+        <form onSubmit={handleSearch} style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
             <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Negroni…" />
           </div>
-          <div style={{ flex: '1 1 220px' }}>
+          <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
             <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Mezcal…" />
+          </div>
+          <div style={{ flex: '1 1 170px' }}>
+            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
+            <input
+              className="warm-input"
+              type="text"
+              value={locationInput}
+              onChange={e => setLocationInput(e.target.value)}
+              placeholder={geo.cityLabel ? `📍 ${geo.cityLabel}` : geo.latitude ? '📍 Current Location' : 'e.g. 90210 or Austin, TX'}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', flex: '1 1 140px' }}>
             <button type="submit" className="warm-btn" disabled={loading} style={{ width: '100%' }}>
@@ -149,7 +208,7 @@ export default function DiscoverPage() {
         {searched && (
           <section style={{ maxWidth: 1024, margin: '0 auto', padding: '0 1.5rem 4rem' }}>
             <div style={{ height: 280, borderRadius: 20, overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(74,46,32,0.1)' }}>
-              <VenueMap venues={venues} userLat={geo.latitude ?? undefined} userLng={geo.longitude ?? undefined} />
+              <VenueMap venues={venues} userLat={(searchCenter?.lat ?? geo.latitude) ?? undefined} userLng={(searchCenter?.lng ?? geo.longitude) ?? undefined} />
             </div>
 
             {loading ? (

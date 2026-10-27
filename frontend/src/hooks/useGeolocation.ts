@@ -1,43 +1,106 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
-interface GeoLocation {
+export interface GeoLocation {
   latitude: number | null
   longitude: number | null
+  cityLabel: string | null
+  source: 'gps' | 'ip' | null
   error: string | null
   loading: boolean
+  requestLocation: () => void
 }
 
 export function useGeolocation(): GeoLocation {
-  const [state, setState] = useState<GeoLocation>({
+  const [state, setState] = useState<Omit<GeoLocation, 'requestLocation'>>({
     latitude: null,
     longitude: null,
+    cityLabel: null,
+    source: null,
     error: null,
     loading: true,
   })
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setState(s => ({ ...s, loading: false, error: 'Geolocation not supported' }))
+  const fetchIpFallback = useCallback(async (reason: string) => {
+    try {
+      const res = await fetch('https://get.geojs.io/v1/ip/geo.json')
+      if (res.ok) {
+        const data = await res.json()
+        const lat = parseFloat(data.latitude)
+        const lng = parseFloat(data.longitude)
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+          const label = [data.city, data.region].filter(Boolean).join(', ') || 'your area'
+          setState({
+            latitude: lat,
+            longitude: lng,
+            cityLabel: label,
+            source: 'ip',
+            error: null,
+            loading: false,
+          })
+          return
+        }
+      }
+    } catch {
+      // Ignore IP fallback failure
+    }
+    setState({
+      latitude: null,
+      longitude: null,
+      cityLabel: null,
+      source: null,
+      error: reason,
+      loading: false,
+    })
+  }, [])
+
+  const requestLocation = useCallback(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      fetchIpFallback('Geolocation not supported')
       return
     }
 
+    setState(s => ({ ...s, loading: true, error: null }))
+
+    // Stage 1: Fast Wi-Fi / cell / cached GPS position
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      pos => {
         setState({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
+          cityLabel: null,
+          source: 'gps',
           error: null,
           loading: false,
         })
       },
-      (err) => {
-        setState({ latitude: null, longitude: null, error: err.message, loading: false })
+      () => {
+        // Stage 2: Retry with low-accuracy network location before falling back to IP
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            setState({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              cityLabel: null,
+              source: 'gps',
+              error: null,
+              loading: false,
+            })
+          },
+          err => {
+            fetchIpFallback(err.message)
+          },
+          { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 }
+        )
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 }
     )
-  }, [])
+  }, [fetchIpFallback])
 
-  return state
+  useEffect(() => {
+    requestLocation()
+  }, [requestLocation])
+
+  return { ...state, requestLocation }
 }
 
 /** Haversine distance in km between two lat/lng pairs */
