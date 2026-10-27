@@ -106,7 +106,7 @@ export default function DiscoverPage() {
             {isLoggedIn ? (
               <a href="/profile" className="nav-btn">My Profile ✓</a>
             ) : (
-              <a href="/login" className="nav-btn">Sign In / Join</a>
+              <a href="/login" className="nav-btn">Join Free · Sign In</a>
             )}
           </nav>
         </div>
@@ -122,7 +122,7 @@ export default function DiscoverPage() {
             Search by drink or ingredient — we'll surface hidden gems sorted by distance from you.
           </p>
           {geo.source === 'gps' && (
-            <p className="hero-note">📍 Using your exact GPS location</p>
+            <p className="hero-note">📍 Currently using your exact GPS location</p>
           )}
           {geo.source === 'ip' && (
             <p className="hero-note">
