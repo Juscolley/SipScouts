@@ -104,10 +104,12 @@ html, body {
 .warm-header-inner {
   max-width: 1024px;
   margin: 0 auto;
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
 }
 
 /* ── Logo / wordmark ─────────────────────────────────────── */
@@ -125,7 +127,8 @@ html, body {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.1rem;
   font-family: 'Inter', sans-serif;
   font-size: 0.875rem;
 }

@@ -93,8 +93,6 @@ export default function DiscoverPage() {
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
             <a href="/merchant">Dashboard</a>
-            <InstallAppButton />
-            <NotificationBell />
             <a href="/login" className="nav-btn">Sign In</a>
           </nav>
         </div>
@@ -102,7 +100,7 @@ export default function DiscoverPage() {
 
       {/* Hero + Search */}
       <div style={{ position: 'relative', zIndex: 10 }}>
-        <section style={{ maxWidth: 720, margin: '0 auto', padding: '4rem 1.5rem 2rem', textAlign: 'center' }}>
+        <section style={{ maxWidth: 720, margin: '0 auto', padding: '3rem 1.5rem 1.75rem', textAlign: 'center' }}>
           <h1 className="hero-title">
             Find your next perfect sip
           </h1>
@@ -114,21 +112,38 @@ export default function DiscoverPage() {
           {geo.error && <p className="hero-note">📍 Location unavailable — results won't be sorted by distance.</p>}
         </section>
 
-        <form onSubmit={handleSearch} style={{ maxWidth: 720, margin: '0 auto', padding: '0 1.5rem 3rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
+        <form onSubmit={handleSearch} style={{ maxWidth: 720, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 220px' }}>
+            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
             <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Negroni…" />
           </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
+          <div style={{ flex: '1 1 220px' }}>
+            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
             <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Mezcal…" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button type="submit" className="warm-btn" disabled={loading}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', flex: '1 1 140px' }}>
+            <button type="submit" className="warm-btn" disabled={loading} style={{ width: '100%' }}>
               {loading ? '🔍 Searching…' : '🔍 Search'}
             </button>
           </div>
         </form>
+
+        {/* Prominent Mobile-First Action Row directly below Search */}
+        <div
+          style={{
+            maxWidth: 720,
+            margin: '0 auto',
+            padding: '0 1.5rem 2.5rem',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <InstallAppButton />
+          <NotificationBell />
+        </div>
 
         {/* Results */}
         {searched && (

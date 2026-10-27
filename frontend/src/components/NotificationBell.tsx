@@ -46,14 +46,28 @@ export default function NotificationBell() {
   }
 
   if (status === 'subscribed') return (
-    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#2ea043', background: 'rgba(46,160,67,0.1)', borderRadius: 99, padding: '0.25rem 0.75rem' }}>🔔 Notified</span>
+    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', fontWeight: 600, color: '#1a7a42', background: 'rgba(255, 255, 255, 0.92)', border: '1.5px solid #2ea043', borderRadius: 99, padding: '0.65rem 1.25rem', boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>🔔 Notifications On</span>
   )
   if (status === 'denied') return (
-    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.05)', borderRadius: 99, padding: '0.25rem 0.75rem' }}>🔕 Blocked</span>
+    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', background: 'rgba(255, 255, 255, 0.85)', borderRadius: 99, padding: '0.65rem 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>🔕 Alerts Blocked</span>
   )
   return (
     <button onClick={subscribe} disabled={status === 'loading'} className="warm-btn-ghost"
-      style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem', borderRadius: 99 }}>
+      style={{
+        fontSize: '0.9rem',
+        fontWeight: 600,
+        padding: '0.65rem 1.25rem',
+        borderRadius: 99,
+        background: 'rgba(255, 255, 255, 0.92)',
+        border: '1.5px solid var(--primary)',
+        color: 'var(--text-main)',
+        boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.4rem',
+      }}>
       {status === 'loading' ? '⏳ Enabling…' : '🔔 Notify Me'}
     </button>
   )

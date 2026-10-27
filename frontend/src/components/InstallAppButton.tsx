@@ -57,10 +57,24 @@ export default function InstallAppButton() {
         type="button"
         onClick={handleInstallClick}
         className="warm-btn-ghost"
-        style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem', borderRadius: 99, cursor: 'pointer' }}
+        style={{
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          padding: '0.65rem 1.25rem',
+          borderRadius: 99,
+          background: 'rgba(255, 255, 255, 0.92)',
+          border: '1.5px solid var(--primary)',
+          color: 'var(--text-main)',
+          boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.4rem',
+        }}
         title="Install SipScouts on your phone"
       >
-        📲 Get App
+        📲 Get the App
       </button>
 
       {showModal && (
