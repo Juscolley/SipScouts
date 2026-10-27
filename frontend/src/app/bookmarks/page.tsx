@@ -31,10 +31,17 @@ export default function BookmarksPage() {
           <p className="hero-sub" style={{ marginBottom: '2rem' }}>Your bookmarked cafés and bars.</p>
 
           {!isLoggedIn ? (
-            <div className="glass" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>☕</p>
-              <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>Sign in to save and view your favourite spots.</p>
-              <a href="/login" className="warm-btn" style={{ display: 'inline-block', textDecoration: 'none' }}>Sign In</a>
+            <div className="glass" style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🔖</p>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+                Save Your Favorite Spots
+              </h2>
+              <p style={{ fontFamily: 'Inter, sans-serif', color: 'var(--text-light)', maxWidth: 440, margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
+                Create a free Profile or Sign In with your email to bookmark cafés &amp; bars, view your saved spots on a map, and save your favorite drinks &amp; ingredients.
+              </p>
+              <a href="/login" className="warm-btn" style={{ display: 'inline-block', textDecoration: 'none' }}>
+                ✨ Create Free Profile / Sign In
+              </a>
             </div>
           ) : bookmarks.length === 0 ? (
             <div className="glass" style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>

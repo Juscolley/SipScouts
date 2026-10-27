@@ -29,6 +29,7 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [statusIndex, setStatusIndex] = useState(0)
+  const [profilePromptVenue, setProfilePromptVenue] = useState<string | null>(null)
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn } = useBookmarks()
@@ -102,7 +103,11 @@ export default function DiscoverPage() {
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
             <a href="/merchant">Dashboard</a>
-            <a href="/login" className="nav-btn">Sign In</a>
+            {isLoggedIn ? (
+              <a href="/profile" className="nav-btn">My Profile ✓</a>
+            ) : (
+              <a href="/login" className="nav-btn">Sign In / Join</a>
+            )}
           </nav>
         </div>
       </header>
@@ -177,7 +182,7 @@ export default function DiscoverPage() {
               type="text"
               value={locationInput}
               onChange={e => setLocationInput(e.target.value)}
-              placeholder={geo.cityLabel ? `📍 ${geo.cityLabel}` : geo.latitude ? '📍 Current Location' : 'e.g. 90210 or Austin, TX'}
+              placeholder="ZIP or CITY"
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', flex: '1 1 140px' }}>
@@ -192,7 +197,7 @@ export default function DiscoverPage() {
           style={{
             maxWidth: 720,
             margin: '0 auto',
-            padding: '0 1.5rem 2.5rem',
+            padding: '0 1.5rem 1rem',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -203,6 +208,46 @@ export default function DiscoverPage() {
           <InstallAppButton />
           <NotificationBell />
         </div>
+
+        {/* Instant-Use + Free Profile Perks Callout */}
+        {!isLoggedIn && (
+          <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1.5rem 2.25rem', textAlign: 'center' }}>
+            <div
+              className="glass"
+              style={{
+                padding: '0.75rem 1.15rem',
+                borderRadius: 16,
+                background: 'rgba(255, 255, 255, 0.88)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '0.84rem',
+                color: 'var(--text-main)',
+                lineHeight: 1.5,
+              }}
+            >
+              ✨ <strong>Search instantly above!</strong> Want to save locations (🔖), view your{' '}
+              <a href="/bookmarks" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
+                Saved spots
+              </a>
+              , and store your <strong>Favorite Drinks &amp; Ingredients</strong>?{' '}
+              <a
+                href="/login"
+                style={{
+                  display: 'inline-block',
+                  marginLeft: '0.25rem',
+                  color: '#fff',
+                  background: 'var(--primary)',
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 99,
+                  fontWeight: 600,
+                  fontSize: '0.78rem',
+                  textDecoration: 'none',
+                }}
+              >
+                Create Free Profile →
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         {searched && (
@@ -238,11 +283,31 @@ export default function DiscoverPage() {
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                         <span className="tag" style={{ textTransform: 'capitalize' }}>{v.type}</span>
-                        {isLoggedIn && (
-                          <button onClick={() => toggle({ name: v.name, address: v.address, type: v.type, lat: v.lat, lng: v.lng })}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', opacity: isBookmarked(v.name) ? 1 : 0.35, transition: 'opacity 0.2s' }}
-                            title={isBookmarked(v.name) ? 'Remove bookmark' : 'Save spot'}>🔖</button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isLoggedIn) {
+                              toggle({ name: v.name, address: v.address, type: v.type, lat: v.lat, lng: v.lng })
+                            } else {
+                              setProfilePromptVenue(v.name)
+                            }
+                          }}
+                          style={{
+                            background: isBookmarked(v.name) ? 'rgba(226,114,91,0.16)' : 'rgba(74,46,32,0.06)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 99,
+                            padding: '0.22rem 0.6rem',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 600,
+                            color: isBookmarked(v.name) ? 'var(--primary)' : 'var(--text-main)',
+                            transition: 'all 0.2s',
+                          }}
+                          title={isBookmarked(v.name) ? 'Remove from Saved' : 'Save this location'}
+                        >
+                          {isBookmarked(v.name) ? '🔖 Saved' : '🔖 Save'}
+                        </button>
                       </div>
                     </div>
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
@@ -258,6 +323,63 @@ export default function DiscoverPage() {
           </section>
         )}
       </div>
+
+      {/* Modal shown when a guest taps Save on a venue card */}
+      {profilePromptVenue && (
+        <div
+          onClick={() => setProfilePromptVenue(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(40, 18, 8, 0.55)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="glass"
+            style={{
+              maxWidth: 400,
+              width: '100%',
+              padding: '1.75rem',
+              background: '#fcf6f0',
+              borderRadius: 24,
+              color: 'var(--text-main)',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>🔖</p>
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.35rem', marginBottom: '0.5rem' }}>
+              Save &ldquo;{profilePromptVenue}&rdquo;
+            </h3>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-light)', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+              Create a free SipScouts Profile (just enter your email — no password needed!) to bookmark favorite spots, view your <strong>Saved</strong> map, and save your <strong>Favorite Drinks &amp; Ingredients</strong>.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <a
+                href="/login"
+                className="warm-btn"
+                style={{ width: '100%', textDecoration: 'none', display: 'inline-block', padding: '0.75rem 1rem' }}
+              >
+                ✨ Create Free Profile / Sign In
+              </a>
+              <button
+                type="button"
+                onClick={() => setProfilePromptVenue(null)}
+                className="warm-btn-ghost"
+                style={{ width: '100%', padding: '0.55rem 1rem', cursor: 'pointer' }}
+              >
+                Continue Scouting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

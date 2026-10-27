@@ -101,6 +101,25 @@ export default function ProfilePage() {
           <h1 className="hero-title" style={{ marginBottom: '0.3rem' }}>Your Profile</h1>
           {email && <p className="hero-note" style={{ marginBottom: '2rem' }}>Signed in as {email}</p>}
 
+          {!email ? (
+            <div className="glass" style={{ padding: '3rem 2rem', textAlign: 'center', marginTop: '1.25rem' }}>
+              <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✨</p>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.5rem', marginBottom: '0.6rem', color: 'var(--text-main)' }}>
+                Create Your Free SipScouts Profile
+              </h2>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.95rem', color: 'var(--text-light)', maxWidth: 480, margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+                Anyone can search SipScouts instantly! Creating a free profile with your email (no password needed) lets you:
+              </p>
+              <ul style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-main)', textAlign: 'left', maxWidth: 380, margin: '0 auto 1.75rem', lineHeight: 1.8, listStyle: 'none', padding: 0 }}>
+                <li>🔖 <strong>Save &amp; Bookmark</strong> your favorite cafés and bars</li>
+                <li>🗺️ <strong>View your Saved spots</strong> anytime on your personal map</li>
+                <li>☕ <strong>Save your Favorite Drinks &amp; Ingredients</strong> for personalized scouting</li>
+              </ul>
+              <a href="/login" className="warm-btn" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.9rem 1.75rem' }}>
+                ✨ Sign In / Create Free Profile
+              </a>
+            </div>
+          ) : (
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Basic Info */}
             <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -140,6 +159,7 @@ export default function ProfilePage() {
               {saving ? 'Saving…' : saved ? '✅ Saved!' : 'Save Profile'}
             </button>
           </form>
+          )}
         </main>
       </div>
     </div>
