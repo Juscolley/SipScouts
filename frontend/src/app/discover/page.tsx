@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import NotificationBell from '@/components/NotificationBell'
+import InstallAppButton from '@/components/InstallAppButton'
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false })
 
@@ -92,6 +93,7 @@ export default function DiscoverPage() {
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
             <a href="/merchant">Dashboard</a>
+            <InstallAppButton />
             <NotificationBell />
             <a href="/login" className="nav-btn">Sign In</a>
           </nav>
