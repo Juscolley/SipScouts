@@ -278,7 +278,9 @@ export default function DiscoverPage() {
                       <div>
                         <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.1rem', color: 'var(--text-main)' }}>{v.name}</h3>
                         {v.distanceKm !== undefined && (
-                          <p className="distance">{v.distanceKm < 1 ? `${Math.round(v.distanceKm * 1000)}m away` : `${v.distanceKm.toFixed(1)}km away`}</p>
+                          <p className="distance">
+                            {v.distanceKm < 1 ? `${Math.round(v.distanceKm * 1000)}m` : `${v.distanceKm.toFixed(1)} km`} · {(v.distanceKm * 0.621371).toFixed(1)} mi away
+                          </p>
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
