@@ -56,6 +56,7 @@ async def ping():
 
 @app.get("/api/search")
 async def search_venues(
+    request: Request,
     drink: str = "",
     ingredient: str = "",
     lat: float = None,
@@ -67,7 +68,7 @@ async def search_venues(
     Runs Google Places, Yelp, Instagram/TikTok, OpenStreetMap, Reddit, and X/Twitter
     in parallel within a 10–12s window with Zero-Drop background caching.
     """
-    from app.services.geocode_service import geocode_zip
+    from app.services.geocode_service import geocode_zip, geocode_client_ip
     from app.services.scraper_orchestrator import orchestrate_search
 
     search_lat = lat
@@ -80,10 +81,21 @@ async def search_venues(
             search_lat, search_lng = g_lat, g_lon
             city_name = g_city or zip_code.strip()
 
-    # Default to NYC coordinates if browser geolocation is off and no zip code was given
+    # If browser GPS was not passed and no zip/city was typed, detect the visitor's real location via their IP
     if search_lat is None or search_lng is None:
-        search_lat = 40.7223
-        search_lng = -73.9887
+        forwarded_for = (
+            request.headers.get("x-vercel-forwarded-for")
+            or request.headers.get("cf-connecting-ip")
+            or request.headers.get("x-forwarded-for")
+            or (request.client.host if request.client else "")
+        )
+        ip_lat, ip_lon, ip_city = geocode_client_ip(forwarded_for)
+        if ip_lat is not None and ip_lon is not None:
+            search_lat, search_lng = ip_lat, ip_lon
+            city_name = ip_city or ""
+        else:
+            search_lat = 39.8283
+            search_lng = -98.5795
 
     venues = await orchestrate_search(
         drink=drink,

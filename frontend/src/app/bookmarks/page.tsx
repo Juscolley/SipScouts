@@ -27,6 +27,46 @@ export default function BookmarksPage() {
 
       <div style={{ position: 'relative', zIndex: 10 }}>
         <main className="warm-main">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <a
+              href="/discover"
+              className="warm-btn-ghost"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(255, 255, 255, 0.92)',
+                borderRadius: 99,
+                padding: '0.5rem 1.1rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                textDecoration: 'none',
+                color: 'var(--text-main)',
+              }}
+            >
+              ← Back to Your Search Results
+            </a>
+            {isLoggedIn && (
+              <a
+                href="/profile"
+                className="warm-btn-ghost"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: 'rgba(255, 255, 255, 0.92)',
+                  borderRadius: 99,
+                  padding: '0.5rem 1.1rem',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  textDecoration: 'none',
+                  color: 'var(--primary)',
+                }}
+              >
+                ⚙️ Edit Profile &amp; Favorites
+              </a>
+            )}
+          </div>
           <h1 className="hero-title" style={{ marginBottom: '0.4rem' }}>Saved Spots</h1>
           <p className="hero-sub" style={{ marginBottom: '2rem' }}>Your bookmarked cafés and bars.</p>
 

@@ -17,8 +17,14 @@ interface Venue {
   lat: number
   lng: number
   tags: string[]
+  phone?: string | null
+  open_now?: boolean | null
+  website?: string | null
+  instagram_url?: string | null
   distanceKm?: number
 }
+
+const SEARCH_STORAGE_KEY = 'sipscouts_last_search_v1'
 
 export default function DiscoverPage() {
   const [drink, setDrink] = useState('')
@@ -36,12 +42,32 @@ export default function DiscoverPage() {
 
   const queryLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'your perfect sip'
   const scoutingMessages = [
-    `📍 Scouting nearby cafés & bars for "${queryLabel}"…`,
+    `📍 Scouting nearby cafés, tea houses & bars for "${queryLabel}"…`,
     `📸 Checking local Instagram & TikTok posts for "${queryLabel}"…`,
     `⭐ Cross-checking Google Places & Yelp menus and reviews…`,
     `💬 Scanning neighborhood Reddit threads for hidden gems…`,
     `🗺️ Ranking discovered spots by distance from you…`,
   ]
+
+  // Restore last search from sessionStorage when user returns from Profile / Saved / Magic Link
+  useEffect(() => {
+    try {
+      const savedRaw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
+      if (savedRaw) {
+        const parsed = JSON.parse(savedRaw)
+        if (parsed && Array.isArray(parsed.venues) && parsed.searched) {
+          setDrink(parsed.drink ?? '')
+          setIngredient(parsed.ingredient ?? '')
+          setLocationInput(parsed.locationInput ?? '')
+          setSearchCenter(parsed.searchCenter ?? null)
+          setVenues(parsed.venues)
+          setSearched(true)
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [])
 
   useEffect(() => {
     if (!loading) {
@@ -62,25 +88,64 @@ export default function DiscoverPage() {
       const params = new URLSearchParams()
       if (drink) params.set('drink', drink)
       if (ingredient) params.set('ingredient', ingredient)
+
+      let activeLat = geo.latitude
+      let activeLng = geo.longitude
+
       if (locationInput.trim()) {
         params.set('zip_code', locationInput.trim())
-      } else if (geo.latitude && geo.longitude) {
-        params.set('lat', String(geo.latitude))
-        params.set('lng', String(geo.longitude))
+      } else {
+        // If user clicked Search while GPS is still initializing, grab client IP coordinates immediately so it never defaults to NYC
+        if (activeLat === null || activeLng === null) {
+          try {
+            const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json')
+            if (ipRes.ok) {
+              const ipData = await ipRes.json()
+              const parsedLat = parseFloat(ipData.latitude)
+              const parsedLng = parseFloat(ipData.longitude)
+              if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
+                activeLat = parsedLat
+                activeLng = parsedLng
+              }
+            }
+          } catch {
+            // Backend will also check client IP headers as a second safety net
+          }
+        }
+        if (activeLat !== null && activeLng !== null) {
+          params.set('lat', String(activeLat))
+          params.set('lng', String(activeLng))
+        }
       }
 
       const res = await fetch(`/api/search?${params.toString()}`)
       const data = await res.json()
       let results: Venue[] = data.venues ?? []
-      const refLat: number | null = data.center?.lat ?? geo.latitude
-      const refLng: number | null = data.center?.lng ?? geo.longitude
+      const refLat: number | null = data.center?.lat ?? activeLat
+      const refLng: number | null = data.center?.lng ?? activeLng
+      const newCenter = refLat && refLng ? { lat: refLat, lng: refLng } : null
       if (refLat && refLng) {
-        setSearchCenter({ lat: refLat, lng: refLng })
+        setSearchCenter(newCenter)
         results = results
           .map(v => ({ ...v, distanceKm: distanceKm(refLat, refLng, v.lat, v.lng) }))
           .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
       }
       setVenues(results)
+      try {
+        sessionStorage.setItem(
+          SEARCH_STORAGE_KEY,
+          JSON.stringify({
+            drink,
+            ingredient,
+            locationInput,
+            searchCenter: newCenter,
+            venues: results,
+            searched: true,
+          })
+        )
+      } catch {
+        // Ignore storage quota errors
+      }
     } catch {
       setVenues([])
     } finally {
@@ -119,7 +184,7 @@ export default function DiscoverPage() {
             Find your next perfect sip
           </h1>
           <p className="hero-sub">
-            Search by drink or ingredient — we'll surface hidden gems sorted by distance from you.
+            Coffee, tea, or craft cocktails — search by drink or ingredient and we&apos;ll surface hidden gems sorted by distance.
           </p>
           {geo.source === 'gps' && (
             <p className="hero-note">📍 Currently using your exact GPS location</p>
@@ -169,11 +234,11 @@ export default function DiscoverPage() {
         <form onSubmit={handleSearch} style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
-            <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Negroni…" />
+            <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Matcha, Negroni…" />
           </div>
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
-            <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Mezcal…" />
+            <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Yuzu, Mezcal…" />
           </div>
           <div style={{ flex: '1 1 170px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
@@ -263,18 +328,18 @@ export default function DiscoverPage() {
                   {scoutingMessages[statusIndex]}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Deep-scouting menus & social posts so no hidden local gem is skipped…
+                  Deep-scouting menus &amp; social posts so no hidden local gem is skipped…
                 </p>
               </div>
             ) : venues.length === 0 ? (
               <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No venues found yet. Try a different drink or ingredient!
+                No venues found yet. Try a different drink, ingredient, or city!
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '1rem' }}>
                 {venues.map(v => (
                   <div key={v.id} className="warm-card glass">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
                       <div>
                         <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.1rem', color: 'var(--text-main)' }}>{v.name}</h3>
                         {v.distanceKm !== undefined && (
@@ -283,7 +348,7 @@ export default function DiscoverPage() {
                           </p>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
                         <span className="tag" style={{ textTransform: 'capitalize' }}>{v.type}</span>
                         <button
                           type="button"
@@ -312,9 +377,59 @@ export default function DiscoverPage() {
                         </button>
                       </div>
                     </div>
+
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
+
+                    {/* Compact Action Row: Open/Closed Badge + 1-Tap Call + Social / Website Links */}
+                    {(v.open_now !== undefined && v.open_now !== null) || v.phone || v.instagram_url || v.website ? (
+                      <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
+                        {v.open_now === true && (
+                          <span className="tag tag-green" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem' }}>
+                            🟢 Open Now
+                          </span>
+                        )}
+                        {v.open_now === false && (
+                          <span className="tag tag-ghost" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', color: '#a94442' }}>
+                            🔴 Closed
+                          </span>
+                        )}
+                        {v.phone && (
+                          <a
+                            href={`tel:${v.phone}`}
+                            className="tag tag-ghost"
+                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-main)' }}
+                            title={`Call ${v.phone}`}
+                          >
+                            📞 Call
+                          </a>
+                        )}
+                        {v.instagram_url && (
+                          <a
+                            href={v.instagram_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tag tag-ghost"
+                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--primary)' }}
+                          >
+                            📸 Instagram
+                          </a>
+                        )}
+                        {v.website && (
+                          <a
+                            href={v.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tag tag-ghost"
+                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-light)' }}
+                          >
+                            🌐 Menu / Site
+                          </a>
+                        )}
+                      </div>
+                    ) : null}
+
                     {v.tags.length > 0 && (
-                      <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                         {v.tags.map(tag => <span key={tag} className="tag tag-ghost">{tag}</span>)}
                       </div>
                     )}
@@ -360,7 +475,7 @@ export default function DiscoverPage() {
               Save &ldquo;{profilePromptVenue}&rdquo;
             </h3>
             <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-light)', lineHeight: 1.55, marginBottom: '1.25rem' }}>
-              Create a free SipScouts Profile (just enter your email — no password needed!) to bookmark favorite spots, view your <strong>Saved</strong> map, and save your <strong>Favorite Drinks &amp; Ingredients</strong>.
+              Create a free SipScouts Profile (just enter your email — no password needed!) to bookmark favorite spots, view your <strong>Saved</strong> map, and save up to 5 <strong>Favorite Drinks &amp; Ingredients</strong>.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <a
@@ -368,7 +483,7 @@ export default function DiscoverPage() {
                 className="warm-btn"
                 style={{ width: '100%', textDecoration: 'none', display: 'inline-block', padding: '0.75rem 1rem' }}
               >
-                ✨ Create Free Profile / Sign In
+                ✨ Join Free · Sign In
               </a>
               <button
                 type="button"

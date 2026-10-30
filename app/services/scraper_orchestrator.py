@@ -45,12 +45,16 @@ def _normalize_venue(raw: Dict, default_tag: str) -> Optional[Dict]:
         "lat": float(lat),
         "lng": float(lng),
         "tags": tags[:5],
+        "phone": raw.get("phone"),
+        "open_now": raw.get("open_now"),
+        "website": raw.get("website"),
+        "instagram_url": raw.get("instagram_url"),
         "source": raw.get("source", "scout"),
     }
 
 
 def _deduplicate_and_merge(venues: List[Dict]) -> List[Dict]:
-    """Deduplicates venues across scrapers by normalized name and combines source tags."""
+    """Deduplicates venues across scrapers by normalized name and combines source tags & contact info."""
     by_key: Dict[str, Dict] = {}
     for v in venues:
         key = "".join(ch for ch in v["name"].lower() if ch.isalnum())
@@ -67,6 +71,9 @@ def _deduplicate_and_merge(venues: List[Dict]) -> List[Dict]:
             existing["tags"] = merged_tags[:6]
             if existing.get("address") in ("Nearby", "Local Neighborhood Spot") and v.get("address"):
                 existing["address"] = v["address"]
+            for field in ("phone", "open_now", "website", "instagram_url"):
+                if existing.get(field) is None and v.get(field) is not None:
+                    existing[field] = v[field]
     return list(by_key.values())
 
 

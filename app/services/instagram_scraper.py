@@ -85,6 +85,9 @@ def _run_sync_instagram_tiktok_search(keywords: str, lat: float, lon: float) -> 
             platform_tag = f"Instagram (@{ig_handle.lstrip('@')})"
 
         if matched_social:
+            ig_url = spot.get("instagram_url")
+            if not ig_url and ig_handle:
+                ig_url = f"https://www.instagram.com/{ig_handle.lstrip('@').strip('/')}/"
             results.append(
                 {
                     "id": f"social-{name}-{spot['latitude']:.4f}",
@@ -94,6 +97,9 @@ def _run_sync_instagram_tiktok_search(keywords: str, lat: float, lon: float) -> 
                     "longitude": float(spot["longitude"]),
                     "type": spot.get("type", "cafe"),
                     "tags": [platform_tag, keywords, "Independent Gem"],
+                    "phone": spot.get("phone"),
+                    "website": spot.get("website"),
+                    "instagram_url": ig_url,
                     "source": "instagram_tiktok",
                 }
             )

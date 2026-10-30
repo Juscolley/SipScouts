@@ -56,6 +56,9 @@ def _search_yelp_public_index(keywords: str, lat: float, lon: float) -> List[Dic
                         "longitude": float(spot["longitude"]),
                         "type": spot.get("type", "cafe"),
                         "tags": ["Yelp Review Match", keywords],
+                        "phone": spot.get("phone"),
+                        "website": spot.get("website"),
+                        "instagram_url": spot.get("instagram_url"),
                         "source": "yelp",
                     }
                 )
