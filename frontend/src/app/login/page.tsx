@@ -40,6 +40,19 @@ export default function LoginPage() {
             </a>
           </div>
 
+          <img
+            src="/sipscouts-logo.png"
+            alt="SipScouts"
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 16,
+              objectFit: 'cover',
+              border: '1.5px solid rgba(226, 114, 91, 0.45)',
+              boxShadow: '0 6px 18px rgba(74, 46, 32, 0.22)',
+              marginBottom: '0.65rem',
+            }}
+          />
           <h1 className="serif" style={{ fontSize: '2.5rem', marginBottom: '0.35rem' }}>SipScouts</h1>
           <p style={{ color: 'var(--text-light)', fontSize: '0.95rem', marginBottom: '1.75rem' }}>
             Join Free or Sign In — save spots, favorite drinks &amp; ingredients ☕🍸🍵

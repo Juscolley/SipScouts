@@ -114,6 +114,9 @@ html, body {
 
 /* ── Logo / wordmark ─────────────────────────────────────── */
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: 'Playfair Display', serif;
   font-style: italic;
   font-size: 1.75rem;
@@ -121,6 +124,27 @@ html, body {
   color: var(--primary);
   text-decoration: none;
   letter-spacing: 0.5px;
+}
+.logo-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid rgba(226, 114, 91, 0.45);
+  box-shadow: 0 3px 10px rgba(74, 46, 32, 0.22);
+  flex-shrink: 0;
+}
+.hero-logo-badge {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 203, 164, 0.65);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(226, 114, 91, 0.35);
+  display: inline-block;
+  margin-bottom: 0.75rem;
 }
 
 /* ── Nav links ───────────────────────────────────────────── */

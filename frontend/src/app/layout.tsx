@@ -19,8 +19,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sipscouts.com"),
   title: "SipScouts — Find Your Next Perfect Sip",
-  description: "Discover nearby cafés and bars serving your favorite drinks and ingredients.",
+  description: "Discover nearby cafés, tea houses, and cocktail bars serving your favorite drinks and ingredients.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -28,8 +29,33 @@ export const metadata: Metadata = {
     title: "SipScouts",
   },
   icons: {
-    icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/favicon.ico?v=4" },
+      { url: "/icon-192.png?v=4", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png?v=4", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png?v=4", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    title: "SipScouts — Find Your Next Perfect Sip",
+    description: "Coffee, tea, or craft cocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
+    url: "https://sipscouts.com",
+    siteName: "SipScouts",
+    images: [
+      {
+        url: "/sipscouts-logo.jpg",
+        width: 1024,
+        height: 1024,
+        alt: "SipScouts — Coffee, Tea & Craft Cocktail Discovery",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SipScouts — Find Your Next Perfect Sip",
+    description: "Coffee, tea, or craft cocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
+    images: ["/sipscouts-logo.jpg"],
   },
 };
 

@@ -160,7 +160,10 @@ export default function ProfilePage() {
 
       <header className="warm-header" style={{ position: 'relative', zIndex: 30 }}>
         <div className="warm-header-inner">
-          <a href="/discover" className="logo">SipScouts</a>
+          <a href="/discover" className="logo">
+            <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
+            <span>SipScouts</span>
+          </a>
           <nav className="nav-links">
             <a href="/discover">Discover</a>
             <a href="/bookmarks">Saved</a>

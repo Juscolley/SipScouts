@@ -105,15 +105,30 @@ export default function InstallAppButton() {
               textAlign: 'left',
             }}
           >
-            <h3
-              style={{
-                fontFamily: 'Playfair Display, serif',
-                fontSize: '1.35rem',
-                marginBottom: '0.6rem',
-              }}
-            >
-              📲 Install SipScouts on Your Phone
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
+              <img
+                src="/sipscouts-logo.png"
+                alt="SipScouts App Icon"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  objectFit: 'cover',
+                  border: '1.5px solid rgba(226, 114, 91, 0.45)',
+                  boxShadow: '0 4px 12px rgba(74, 46, 32, 0.2)',
+                  flexShrink: 0,
+                }}
+              />
+              <h3
+                style={{
+                  fontFamily: 'Playfair Display, serif',
+                  fontSize: '1.3rem',
+                  margin: 0,
+                }}
+              >
+                Install SipScouts on Your Phone
+              </h3>
+            </div>
             <p
               style={{
                 fontFamily: 'Inter, sans-serif',

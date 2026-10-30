@@ -162,7 +162,10 @@ export default function DiscoverPage() {
       {/* Header */}
       <header className="warm-header" style={{ position: 'relative', zIndex: 30 }}>
         <div className="warm-header-inner">
-          <a href="/discover" className="logo">SipScouts</a>
+          <a href="/discover" className="logo">
+            <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
+            <span>SipScouts</span>
+          </a>
           <nav className="nav-links">
             <span className="active">Discover</span>
             <a href="/bookmarks">Saved</a>
@@ -179,7 +182,12 @@ export default function DiscoverPage() {
 
       {/* Hero + Search */}
       <div style={{ position: 'relative', zIndex: 10 }}>
-        <section style={{ maxWidth: 720, margin: '0 auto', padding: '3rem 1.5rem 1.75rem', textAlign: 'center' }}>
+        <section style={{ maxWidth: 720, margin: '0 auto', padding: '2.25rem 1.5rem 1.5rem', textAlign: 'center' }}>
+          <img
+            src="/sipscouts-logo.png"
+            alt="SipScouts emblem"
+            className="hero-logo-badge"
+          />
           <h1 className="hero-title">
             Find your next perfect sip
           </h1>
