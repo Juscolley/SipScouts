@@ -160,10 +160,22 @@ export default function DiscoverPage() {
     if (autoSearch && (urlDrink || urlIngredient)) {
       // Clean URL query params while preserving browser back button
       window.history.replaceState({}, '', '/discover')
+      let fallbackZip = urlZip
+      if (!fallbackZip.trim()) {
+        try {
+          const localRaw = localStorage.getItem('sipscouts_profile_v1')
+          if (localRaw) {
+            const parsed = JSON.parse(localRaw)
+            fallbackZip = parsed.zip_code ?? ''
+          }
+        } catch {
+          // Ignore
+        }
+      }
       executeSearch({
         drinkVal: urlDrink,
         ingredientVal: urlIngredient,
-        locationVal: urlZip,
+        locationVal: fallbackZip,
       })
       return
     }
@@ -211,7 +223,7 @@ export default function DiscoverPage() {
     const supabase = createClient()
     supabase
       .from('users')
-      .select('name, zip_code, favorite_drinks, favorite_ingredients')
+      .select('name, zip_code, mobile, favorite_drinks, favorite_ingredients')
       .eq('id', userId)
       .single()
       .then(({ data }) => {
@@ -222,12 +234,27 @@ export default function DiscoverPage() {
             favorite_drinks: Array.isArray(data.favorite_drinks) ? data.favorite_drinks : [],
             favorite_ingredients: Array.isArray(data.favorite_ingredients) ? data.favorite_ingredients : [],
           }
-          setMemberProfile(summary)
-          setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
-          try {
-            localStorage.setItem('sipscouts_profile_v1', JSON.stringify(summary))
-          } catch {
-            // Ignore
+          const hasData = Boolean(
+            summary.name.trim() ||
+            summary.zip_code.trim() ||
+            summary.favorite_drinks.length > 0 ||
+            summary.favorite_ingredients.length > 0
+          )
+          if (hasData) {
+            setMemberProfile(summary)
+            setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
+            try {
+              localStorage.setItem(
+                'sipscouts_profile_v1',
+                JSON.stringify({
+                  ...summary,
+                  mobile: data.mobile ?? '',
+                })
+              )
+              localStorage.setItem('sipscouts_has_account', '1')
+            } catch {
+              // Ignore
+            }
           }
         }
       })

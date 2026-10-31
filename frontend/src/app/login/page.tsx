@@ -25,9 +25,9 @@ export default function LoginPage() {
     } else if (requestedMode === 'signin') {
       setMode('signin')
     } else {
-      // If browser has a previously saved profile backup, default to 'signin'
+      // If browser has a previously saved profile backup or has signed in before, default to 'signin'
       try {
-        const hasLocalProfile = localStorage.getItem('sipscouts_profile_v1')
+        const hasLocalProfile = localStorage.getItem('sipscouts_profile_v1') || localStorage.getItem('sipscouts_has_account')
         setMode(hasLocalProfile ? 'signin' : 'join')
       } catch {
         setMode('signin')

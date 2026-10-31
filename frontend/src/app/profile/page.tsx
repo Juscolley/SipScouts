@@ -32,28 +32,45 @@ function isProfilePopulated(p: Profile): boolean {
   )
 }
 
+function mergeTags(existing: string[], rawInput: string, maxItems = MAX_FAVORITES): string[] {
+  if (!rawInput.trim()) return existing.slice(0, maxItems)
+  const parts = rawInput
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+  const next = [...existing]
+  for (const part of parts) {
+    if (!next.some(x => x.toLowerCase() === part.toLowerCase()) && next.length < maxItems) {
+      next.push(part)
+    }
+  }
+  return next.slice(0, maxItems)
+}
+
 function TagInput({
   label,
   values,
   onChange,
+  pendingInput,
+  onPendingInputChange,
   placeholder,
   maxItems = MAX_FAVORITES,
 }: {
   label: string
   values: string[]
   onChange: (v: string[]) => void
+  pendingInput: string
+  onPendingInputChange: (val: string) => void
   placeholder: string
   maxItems?: number
 }) {
-  const [input, setInput] = useState('')
   const atLimit = values.length >= maxItems
 
-  function add() {
-    const t = input.trim()
-    if (t && !values.includes(t) && values.length < maxItems) {
-      onChange([...values, t])
-      setInput('')
-    }
+  function commitPending() {
+    if (!pendingInput.trim()) return
+    const updated = mergeTags(values, pendingInput, maxItems)
+    onChange(updated)
+    onPendingInputChange('')
   }
 
   return (
@@ -82,14 +99,15 @@ function TagInput({
         <input
           className="warm-input"
           type="text"
-          value={input}
+          value={pendingInput}
           disabled={atLimit}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
+          onChange={e => onPendingInputChange(e.target.value)}
+          onBlur={commitPending}
+          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), commitPending())}
           placeholder={atLimit ? `Maximum of ${maxItems} reached` : placeholder}
           style={{ flex: 1 }}
         />
-        <button type="button" onClick={add} disabled={atLimit} className="warm-btn-ghost">
+        <button type="button" onClick={commitPending} disabled={atLimit} className="warm-btn-ghost">
           Add
         </button>
       </div>
@@ -99,6 +117,8 @@ function TagInput({
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile>(EMPTY)
+  const [pendingDrinkInput, setPendingDrinkInput] = useState('')
+  const [pendingIngredientInput, setPendingIngredientInput] = useState('')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -169,6 +189,7 @@ export default function ProfilePage() {
     await supabase.auth.signOut()
     try {
       localStorage.removeItem('sipscouts_profile_v1')
+      localStorage.setItem('sipscouts_has_account', '1')
     } catch {
       // Ignore
     }
@@ -185,7 +206,7 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    let initialPopulated = false
+    let localCandidate: Profile | null = null
     // Load local backup immediately if present
     try {
       const localRaw = localStorage.getItem('sipscouts_profile_v1')
@@ -198,9 +219,9 @@ export default function ProfilePage() {
           favorite_drinks: (parsed.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
           favorite_ingredients: (parsed.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
         }
-        setProfile(candidate)
         if (isProfilePopulated(candidate)) {
-          initialPopulated = true
+          localCandidate = candidate
+          setProfile(candidate)
           setHasExistingProfile(true)
           setIsEditing(false)
         }
@@ -216,12 +237,18 @@ export default function ProfilePage() {
         return
       }
       setEmail(user.email ?? '')
+      try {
+        localStorage.setItem('sipscouts_has_account', '1')
+      } catch {
+        // Ignore
+      }
+
       supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .single()
-        .then(({ data }) => {
+        .then(async ({ data }) => {
           if (data) {
             const loaded: Profile = {
               name: data.name ?? '',
@@ -230,16 +257,36 @@ export default function ProfilePage() {
               favorite_drinks: (data.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
               favorite_ingredients: (data.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
             }
-            setProfile(loaded)
-            const populated = isProfilePopulated(loaded)
-            setHasExistingProfile(populated)
-            setIsEditing(!populated)
-            try {
-              localStorage.setItem('sipscouts_profile_v1', JSON.stringify(loaded))
-            } catch {
-              // Ignore
+            const dbPopulated = isProfilePopulated(loaded)
+            if (dbPopulated) {
+              setProfile(loaded)
+              setHasExistingProfile(true)
+              setIsEditing(false)
+              try {
+                localStorage.setItem('sipscouts_profile_v1', JSON.stringify(loaded))
+              } catch {
+                // Ignore
+              }
+            } else if (localCandidate && isProfilePopulated(localCandidate)) {
+              // Keep local backup and sync it to Supabase so a blank stub row never wipes local profile
+              setProfile(localCandidate)
+              setHasExistingProfile(true)
+              setIsEditing(false)
+              await supabase.from('users').upsert({
+                id: user.id,
+                email: user.email,
+                ...localCandidate,
+                updated_at: new Date().toISOString(),
+              })
+            } else {
+              setHasExistingProfile(false)
+              setIsEditing(true)
             }
-          } else if (!initialPopulated) {
+          } else if (localCandidate && isProfilePopulated(localCandidate)) {
+            setProfile(localCandidate)
+            setHasExistingProfile(true)
+            setIsEditing(false)
+          } else {
             setHasExistingProfile(false)
             setIsEditing(true)
           }
@@ -252,16 +299,24 @@ export default function ProfilePage() {
     e.preventDefault()
     setSaving(true)
 
+    // Automatically merge any un-added text still sitting in the Drink or Ingredient input boxes!
+    const finalDrinks = mergeTags(profile.favorite_drinks, pendingDrinkInput, MAX_FAVORITES)
+    const finalIngredients = mergeTags(profile.favorite_ingredients, pendingIngredientInput, MAX_FAVORITES)
+    setPendingDrinkInput('')
+    setPendingIngredientInput('')
+
     const cleanProfile: Profile = {
-      name: profile.name,
-      zip_code: profile.zip_code,
-      mobile: profile.mobile,
-      favorite_drinks: profile.favorite_drinks.slice(0, MAX_FAVORITES),
-      favorite_ingredients: profile.favorite_ingredients.slice(0, MAX_FAVORITES),
+      name: profile.name.trim(),
+      zip_code: profile.zip_code.trim(),
+      mobile: profile.mobile.trim(),
+      favorite_drinks: finalDrinks,
+      favorite_ingredients: finalIngredients,
     }
+    setProfile(cleanProfile)
 
     try {
       localStorage.setItem('sipscouts_profile_v1', JSON.stringify(cleanProfile))
+      localStorage.setItem('sipscouts_has_account', '1')
     } catch {
       // Ignore storage quota errors
     }
@@ -731,6 +786,8 @@ export default function ProfilePage() {
                       label="Favorite Drinks (Up to 5)"
                       values={profile.favorite_drinks}
                       onChange={v => setProfile({ ...profile, favorite_drinks: v })}
+                      pendingInput={pendingDrinkInput}
+                      onPendingInputChange={setPendingDrinkInput}
                       placeholder="e.g. Oat Latte, Matcha, Saffron Martini…"
                       maxItems={5}
                     />
@@ -738,6 +795,8 @@ export default function ProfilePage() {
                       label="Favorite Ingredients (Up to 5)"
                       values={profile.favorite_ingredients}
                       onChange={v => setProfile({ ...profile, favorite_ingredients: v })}
+                      pendingInput={pendingIngredientInput}
+                      onPendingInputChange={setPendingIngredientInput}
                       placeholder="e.g. Cardamom, Yuzu, Pistachio, Lavender…"
                       maxItems={5}
                     />
