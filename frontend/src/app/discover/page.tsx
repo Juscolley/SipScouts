@@ -51,6 +51,13 @@ export default function DiscoverPage() {
 
   // Restore last search from sessionStorage when user returns from Profile / Saved / Magic Link
   useEffect(() => {
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    if (hash.includes('access_token=') || search.includes('code=') || search.includes('token_hash=')) {
+      window.location.replace(`/auth/callback${search}${hash}`)
+      return
+    }
+
     try {
       const savedRaw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
       if (savedRaw) {

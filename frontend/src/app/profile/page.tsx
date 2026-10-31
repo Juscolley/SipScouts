@@ -96,6 +96,23 @@ export default function ProfilePage() {
   const { bookmarks, toggle } = useBookmarks()
 
   useEffect(() => {
+    // Load local backup immediately if present
+    try {
+      const localRaw = localStorage.getItem('sipscouts_profile_v1')
+      if (localRaw) {
+        const parsed = JSON.parse(localRaw)
+        setProfile(prev => ({
+          name: parsed.name ?? prev.name,
+          zip_code: parsed.zip_code ?? prev.zip_code,
+          mobile: parsed.mobile ?? prev.mobile,
+          favorite_drinks: (parsed.favorite_drinks ?? prev.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
+          favorite_ingredients: (parsed.favorite_ingredients ?? prev.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
+        }))
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -107,13 +124,19 @@ export default function ProfilePage() {
           .single()
           .then(({ data }) => {
             if (data) {
-              setProfile({
+              const loaded = {
                 name: data.name ?? '',
                 zip_code: data.zip_code ?? '',
                 mobile: data.mobile ?? '',
                 favorite_drinks: (data.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
                 favorite_ingredients: (data.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
-              })
+              }
+              setProfile(loaded)
+              try {
+                localStorage.setItem('sipscouts_profile_v1', JSON.stringify(loaded))
+              } catch {
+                // Ignore
+              }
             }
           })
       }
@@ -124,25 +147,38 @@ export default function ProfilePage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setSaving(false)
-      return
-    }
-    await supabase.from('users').upsert({
-      id: user.id,
-      email: user.email,
+
+    const cleanProfile: Profile = {
       name: profile.name,
       zip_code: profile.zip_code,
       mobile: profile.mobile,
       favorite_drinks: profile.favorite_drinks.slice(0, MAX_FAVORITES),
       favorite_ingredients: profile.favorite_ingredients.slice(0, MAX_FAVORITES),
-      updated_at: new Date().toISOString(),
-    })
+    }
+
+    try {
+      localStorage.setItem('sipscouts_profile_v1', JSON.stringify(cleanProfile))
+    } catch {
+      // Ignore storage quota errors
+    }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('users').upsert({
+        id: user.id,
+        email: user.email,
+        ...cleanProfile,
+        updated_at: new Date().toISOString(),
+      })
+    }
+
     setSaving(false)
     setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    // Automatically take the user back to their Search Results (or Search page) after saving!
+    setTimeout(() => {
+      window.location.href = '/discover'
+    }, 650)
   }
 
   if (loading) {
@@ -324,7 +360,7 @@ export default function ProfilePage() {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <button type="submit" className="warm-btn" style={{ flex: '2 1 220px', fontSize: '1.05rem', padding: '1rem' }} disabled={saving}>
-                    {saving ? 'Saving…' : saved ? '✅ Profile Saved!' : 'Save Profile'}
+                    {saving ? 'Saving Profile…' : saved ? '✅ Profile Saved! Taking you to Search…' : 'Save Profile & Return to Search →'}
                   </button>
                   <a
                     href="/discover"

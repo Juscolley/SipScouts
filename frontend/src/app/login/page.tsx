@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -8,6 +8,30 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    if (hash.includes('access_token=') || search.includes('code=') || search.includes('token_hash=')) {
+      window.location.replace(`/auth/callback${search}${hash}`)
+      return
+    }
+
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.replace('/profile')
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        window.location.replace('/profile')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,10 +87,10 @@ export default function LoginPage() {
               <p style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>✨</p>
               <p style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '0.4rem' }}>Magic Sign-In Link Sent!</p>
               <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-                Check your inbox at <strong>{email}</strong> and tap the link to open your Saved Places &amp; Profile.
+                Check your inbox at <strong>{email}</strong> and tap the link to open your Profile &amp; Saved Places.
               </p>
               <p style={{ fontFamily: 'Inter, sans-serif', color: 'var(--text-muted)', fontSize: '0.78rem', lineHeight: 1.45 }}>
-                💡 <em>Note: The verification email is delivered via our secure login partner (<strong>Supabase Auth</strong>). Check your Spam/Promotions folder if it doesn&apos;t appear within 30 seconds.</em>
+                💡 <em>Check your Spam/Promotions folder if the email doesn&apos;t appear within 30 seconds.</em>
               </p>
             </div>
           ) : (
@@ -87,7 +111,7 @@ export default function LoginPage() {
                 {loading ? 'Sending…' : '✨ Send Free Magic Link'}
               </button>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: 1.45 }}>
-                100% Free · No password needed — we&apos;ll email you a 1-tap link to access your Saved Places &amp; Profile.
+                100% Free · No password needed — we&apos;ll email you a 1-tap link to set up your Profile &amp; return to your search.
               </p>
             </form>
           )}
