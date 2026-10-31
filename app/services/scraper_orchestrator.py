@@ -149,8 +149,8 @@ def _load_cached_db_venues(keyword: str, lat: float, lon: float, radius_km: floa
 async def orchestrate_search(
     drink: str = "",
     ingredient: str = "",
-    lat: float = 40.7223,
-    lon: float = -73.9887,
+    lat: float = 39.8283,
+    lon: float = -98.5795,
 ) -> List[Dict]:
     """
     Fires all 6 SipScouts scrapers simultaneously in parallel with a 10–12 second window.
@@ -223,7 +223,10 @@ async def orchestrate_search(
 
         asyncio.create_task(_finish_and_save_slow_tasks(list(pending)))
 
-    deduped = _deduplicate_and_merge(collected)
+    deduped = [
+        v for v in _deduplicate_and_merge(collected)
+        if calculate_haversine_distance(lat, lon, v["lat"], v["lng"]) <= 35.0
+    ]
 
     # Persist discovered venues to SQLite in background thread
     if deduped:

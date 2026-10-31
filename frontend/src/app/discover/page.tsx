@@ -139,6 +139,7 @@ export default function DiscoverPage() {
         setSearchCenter(newCenter)
         results = results
           .map(v => ({ ...v, distanceKm: distanceKm(refLat, refLng, v.lat, v.lng) }))
+          .filter(v => (v.distanceKm ?? 0) <= 60)
           .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
       }
       setVenues(results)
@@ -538,21 +539,6 @@ export default function DiscoverPage() {
                           🌐 Menu / Site
                         </a>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => handleShareVenue(v)}
-                        className="tag"
-                        style={{
-                          fontSize: '0.74rem',
-                          padding: '0.18rem 0.65rem',
-                          fontWeight: 600,
-                          border: '1px solid rgba(226,114,91,0.35)',
-                          cursor: 'pointer',
-                        }}
-                        title="Send a preview card to a friend via text, iMessage, or WhatsApp"
-                      >
-                        {sharedVenueName === v.name ? '✅ Link Copied!' : '🥂 Share / Invite'}
-                      </button>
                     </div>
 
                     {v.tags.length > 0 && (
