@@ -17,9 +17,13 @@ export function useBookmarks() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         setUserId(user.id)
+        // Ensure a corresponding row exists in public.users so bookmarks FK always succeeds
+        await supabase
+          .from('users')
+          .upsert({ id: user.id, email: user.email }, { onConflict: 'id', ignoreDuplicates: true })
         supabase
           .from('bookmarks')
           .select('*')
