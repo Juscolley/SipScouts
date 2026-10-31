@@ -38,36 +38,48 @@ interface VenueLeadSummary {
   topCraving: string
 }
 
+const CREATOR_ADMIN_EMAIL = 'juscolley0603@gmail.com'
+
 export default function MerchantDashboard() {
   const [rows, setRows] = useState<HourBucket[]>([])
   const [clickRows, setClickRows] = useState<VenueClickRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthorizedCreator, setIsAuthorizedCreator] = useState(false)
   const [locationFilter, setLocationFilter] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
 
-    Promise.all([
-      supabase
-        .from('merchant_analytics')
-        .select('*')
-        .order('hour_bucket', { ascending: false })
-        .limit(150),
-      supabase
-        .from('venue_clicks')
-        .select('*')
-        .order('clicked_at', { ascending: false })
-        .limit(200),
-    ]).then(([analyticsRes, clicksRes]) => {
-      const d = ((analyticsRes.data ?? []) as HourBucket[])
-      setRows(d)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const email = (user?.email ?? '').trim().toLowerCase()
+      if (email !== CREATOR_ADMIN_EMAIL) {
+        setIsAuthorizedCreator(false)
+        setLoading(false)
+        return
+      }
 
-      const dbClicks = ((clicksRes.data ?? []) as VenueClickRow[])
-      const localBackup = getLocalVenueClicksBackup() as VenueClickRow[]
-      // Merge DB clicks + any local clicks not yet in DB
-      const mergedClicks = dbClicks.length > 0 ? dbClicks : localBackup
-      setClickRows(mergedClicks)
-      setLoading(false)
+      setIsAuthorizedCreator(true)
+      Promise.all([
+        supabase
+          .from('merchant_analytics')
+          .select('*')
+          .order('hour_bucket', { ascending: false })
+          .limit(150),
+        supabase
+          .from('venue_clicks')
+          .select('*')
+          .order('clicked_at', { ascending: false })
+          .limit(200),
+      ]).then(([analyticsRes, clicksRes]) => {
+        const d = ((analyticsRes.data ?? []) as HourBucket[])
+        setRows(d)
+
+        const dbClicks = ((clicksRes.data ?? []) as VenueClickRow[])
+        const localBackup = getLocalVenueClicksBackup() as VenueClickRow[]
+        const mergedClicks = dbClicks.length > 0 ? dbClicks : localBackup
+        setClickRows(mergedClicks)
+        setLoading(false)
+      })
     })
   }, [])
 
@@ -272,28 +284,48 @@ export default function MerchantDashboard() {
                 Live neighborhood demand, unmet menu opportunities, and direct venue lead attribution.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={locationFilter}
-                onChange={e => setLocationFilter(e.target.value)}
-                placeholder="Filter by City or ZIP (e.g. 07044)…"
-                className="warm-input"
-                style={{ width: 235, padding: '0.6rem 0.9rem', fontSize: '0.88rem' }}
-              />
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="warm-btn"
-                style={{ padding: '0.65rem 1.1rem', fontSize: '0.85rem', borderRadius: 10 }}
-              >
-                📥 Export B2B Report (CSV)
-              </button>
-            </div>
+            {isAuthorizedCreator && (
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={locationFilter}
+                  onChange={e => setLocationFilter(e.target.value)}
+                  placeholder="Filter by City or ZIP (e.g. 07044)…"
+                  className="warm-input"
+                  style={{ width: 235, padding: '0.6rem 0.9rem', fontSize: '0.88rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="warm-btn"
+                  style={{ padding: '0.65rem 1.1rem', fontSize: '0.85rem', borderRadius: 10 }}
+                >
+                  📥 Export B2B Report (CSV)
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem 0' }}><div className="spinner" /></div>
+          ) : !isAuthorizedCreator ? (
+            <div className="glass" style={{ maxWidth: 480, margin: '2rem auto', padding: '3rem 2rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>🔒</p>
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.5rem', color: 'var(--text-main)', marginBottom: '0.6rem' }}>
+                Creator &amp; Admin Access Only
+              </h2>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.92rem', color: 'var(--text-light)', lineHeight: 1.55, marginBottom: '1.5rem' }}>
+                The SipScouts B2B Market &amp; Craving Intelligence Dashboard is private and restricted to the SipScouts Creator account.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a href="/login" className="warm-btn" style={{ textDecoration: 'none', display: 'inline-block' }}>
+                  Sign In as Creator
+                </a>
+                <a href="/discover" className="warm-btn-ghost" style={{ textDecoration: 'none', display: 'inline-block' }}>
+                  ← Back to Search
+                </a>
+              </div>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               {/* Executive KPI Grid */}

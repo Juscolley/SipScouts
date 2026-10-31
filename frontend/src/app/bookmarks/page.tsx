@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false })
 
 export default function BookmarksPage() {
-  const { bookmarks, toggle, isLoggedIn } = useBookmarks()
+  const { bookmarks, toggle, isLoggedIn, isAdmin } = useBookmarks()
 
   return (
     <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
@@ -23,7 +23,7 @@ export default function BookmarksPage() {
             <a href="/discover">Discover</a>
             <span className="active">Saved</span>
             <a href="/profile">Profile</a>
-            <a href="/merchant">Dashboard</a>
+            {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
           </nav>
         </div>
       </header>

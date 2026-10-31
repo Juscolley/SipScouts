@@ -12,15 +12,19 @@ export interface Bookmark {
   notes: string
 }
 
+const ADMIN_EMAIL = 'juscolley0603@gmail.com'
+
 export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [userId, setUserId] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         setUserId(user.id)
+        setUserEmail(user.email ?? '')
         // Ensure a corresponding row exists in public.users so bookmarks FK always succeeds
         await supabase
           .from('users')
@@ -76,5 +80,7 @@ export function useBookmarks() {
     [userId, bookmarks]
   )
 
-  return { bookmarks, isBookmarked, toggle, isLoggedIn: !!userId, userId }
+  const isAdmin = userEmail.trim().toLowerCase() === ADMIN_EMAIL
+
+  return { bookmarks, isBookmarked, toggle, isLoggedIn: !!userId, userId, isAdmin }
 }

@@ -49,6 +49,7 @@ def _normalize_venue(raw: Dict, default_tag: str) -> Optional[Dict]:
         "open_now": raw.get("open_now"),
         "website": raw.get("website"),
         "instagram_url": raw.get("instagram_url"),
+        "match_tier": raw.get("match_tier", "exact"),
         "source": raw.get("source", "scout"),
     }
 
@@ -74,6 +75,8 @@ def _deduplicate_and_merge(venues: List[Dict]) -> List[Dict]:
             for field in ("phone", "open_now", "website", "instagram_url"):
                 if existing.get(field) is None and v.get(field) is not None:
                     existing[field] = v[field]
+            if v.get("match_tier") == "exact":
+                existing["match_tier"] = "exact"
     return list(by_key.values())
 
 
@@ -225,7 +228,7 @@ async def orchestrate_search(
 
     deduped = [
         v for v in _deduplicate_and_merge(collected)
-        if calculate_haversine_distance(lat, lon, v["lat"], v["lng"]) <= 35.0
+        if calculate_haversine_distance(lat, lon, v["lat"], v["lng"]) <= 55.0
     ]
 
     # Persist discovered venues to SQLite in background thread

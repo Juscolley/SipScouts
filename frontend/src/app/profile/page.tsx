@@ -95,7 +95,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [badgeCopied, setBadgeCopied] = useState(false)
-  const { bookmarks, toggle, userId } = useBookmarks()
+  const { bookmarks, toggle, userId, isAdmin } = useBookmarks()
 
   const earnedBadgeName =
     bookmarks.length >= 3
@@ -262,7 +262,7 @@ export default function ProfilePage() {
             <a href="/discover">Discover</a>
             <a href="/bookmarks">Saved</a>
             <span className="active">Profile</span>
-            <a href="/merchant">Dashboard</a>
+            {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
           </nav>
         </div>
       </header>

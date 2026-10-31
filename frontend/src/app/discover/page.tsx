@@ -22,6 +22,7 @@ interface Venue {
   open_now?: boolean | null
   website?: string | null
   instagram_url?: string | null
+  match_tier?: 'exact' | 'potential'
   distanceKm?: number
 }
 
@@ -40,7 +41,7 @@ export default function DiscoverPage() {
   const [sharedVenueName, setSharedVenueName] = useState<string | null>(null)
 
   const geo = useGeolocation()
-  const { isBookmarked, toggle, isLoggedIn, userId } = useBookmarks()
+  const { isBookmarked, toggle, isLoggedIn, userId, isAdmin } = useBookmarks()
 
   const queryLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'your perfect sip'
   const scoutingMessages = [
@@ -139,7 +140,7 @@ export default function DiscoverPage() {
         setSearchCenter(newCenter)
         results = results
           .map(v => ({ ...v, distanceKm: distanceKm(refLat, refLng, v.lat, v.lng) }))
-          .filter(v => (v.distanceKm ?? 0) <= 60)
+          .filter(v => (v.distanceKm ?? 0) <= 88.6)
           .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
       }
       setVenues(results)
@@ -232,7 +233,7 @@ export default function DiscoverPage() {
             <span className="active">Discover</span>
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
-            <a href="/merchant">Dashboard</a>
+            {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
             {isLoggedIn ? (
               <a href="/profile" className="nav-btn">My Profile ✓</a>
             ) : (
@@ -403,11 +404,14 @@ export default function DiscoverPage() {
               </div>
             ) : venues.length === 0 ? (
               <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No venues found yet. Try a different drink, ingredient, or city!
+                No venues found within 55 miles yet. Try a different drink, ingredient, or city!
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '1rem' }}>
-                {venues.map(v => (
+              (() => {
+                const exactMatches = venues.filter(v => v.match_tier !== 'potential' && !v.tags.includes('Potential Match'))
+                const potentialMatches = venues.filter(v => v.match_tier === 'potential' || v.tags.includes('Potential Match'))
+
+                const renderVenueCard = (v: Venue, isPotential: boolean) => (
                   <div key={v.id} className="warm-card glass">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
                       <div>
@@ -450,8 +454,16 @@ export default function DiscoverPage() {
 
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
 
-                    {/* Compact Action Row: Open/Closed Badge + 1-Tap Call + Social / Website Links + Viral Share */}
                     <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
+                      {isPotential ? (
+                        <span className="tag tag-ghost" style={{ fontSize: '0.72rem', padding: '0.18rem 0.55rem', fontWeight: 600 }}>
+                          ✨ Potential Match
+                        </span>
+                      ) : (
+                        <span className="tag" style={{ fontSize: '0.72rem', padding: '0.18rem 0.55rem', fontWeight: 700 }}>
+                          🎯 Exact Match
+                        </span>
+                      )}
                       {v.open_now === true && (
                         <span className="tag tag-green" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem' }}>
                           🟢 Open Now
@@ -541,14 +553,58 @@ export default function DiscoverPage() {
                       )}
                     </div>
 
-                    {v.tags.length > 0 && (
+                    {v.tags.filter(t => t !== 'Exact Match' && t !== 'Potential Match').length > 0 && (
                       <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        {v.tags.map(tag => <span key={tag} className="tag tag-ghost">{tag}</span>)}
+                        {v.tags
+                          .filter(t => t !== 'Exact Match' && t !== 'Potential Match')
+                          .map(tag => (
+                            <span key={tag} className="tag tag-ghost">{tag}</span>
+                          ))}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                )
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {exactMatches.length > 0 && (
+                      <div>
+                        <div className="glass" style={{ padding: '0.9rem 1.25rem', borderRadius: 16, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div>
+                            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
+                              🎯 Closest Exact Matches ({exactMatches.length})
+                            </h2>
+                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.15rem' }}>
+                              Local spots within 55 miles whose menus, reviews, or social posts directly match your requested drink or ingredient.
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '1rem' }}>
+                          {exactMatches.map(v => renderVenueCard(v, false))}
+                        </div>
+                      </div>
+                    )}
+
+                    {potentialMatches.length > 0 && (
+                      <div>
+                        <div className="glass" style={{ padding: '0.9rem 1.25rem', borderRadius: 16, marginBottom: '1rem' }}>
+                          <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.2rem', color: 'var(--text-main)', margin: 0 }}>
+                            ✨ Potential Local Matches ({potentialMatches.length})
+                          </h2>
+                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.15rem' }}>
+                            {exactMatches.length === 0
+                              ? `We didn't find an exact menu listing for "${queryLabel}" within 55 miles, but these nearby specialty spots craft similar drinks and may carry your requested ingredients:`
+                              : 'Additional nearby specialty spots in this drink category that may also carry your requested ingredients or craft a custom version:'}
+                          </p>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '1rem' }}>
+                          {potentialMatches.map(v => renderVenueCard(v, true))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()
             )}
           </section>
         )}

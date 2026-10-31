@@ -9,9 +9,8 @@ from app.services.distance import calculate_haversine_distance
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# Maximum distance (in miles) allowed from the user's search center so Google Places locationBias
-# never sneaks in out-of-state results (e.g. NYC/Boston/Philly) for rare ingredient queries.
-MAX_LOCAL_DISTANCE_MILES = 35.0
+# Maximum distance (in miles) allowed from the user's search center (works globally across all countries).
+MAX_LOCAL_DISTANCE_MILES = 55.0
 
 COCKTAIL_KEYWORDS = (
     "negroni", "mezcal", "martini", "margarita", "spritz", "old fashioned",
@@ -205,37 +204,47 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     if not _is_configured(api_key):
         return []
 
-    search_query = build_smart_search_query(keywords)
+    kw_clean = (keywords or "").strip()
+    search_query = build_smart_search_query(kw_clean)
     collected: List[Dict] = []
     seen_ids = set()
 
+    # Stage 1: Closest Exact Matches within 55 miles
+    exact_query = f'"{kw_clean}"' if " " in kw_clean else search_query
     try:
-        results = _search_places_new(api_key, search_query, lat, lon)
-        for r in results:
+        exact_results = _search_places_new(api_key, exact_query, lat, lon, radius_m=50000.0)
+        for r in exact_results:
+            r["match_tier"] = "exact"
+            if "Exact Match" not in r["tags"]:
+                r["tags"].insert(0, "Exact Match")
             seen_ids.add(r["id"])
             collected.append(r)
     except Exception as e:
-        logger.info(f"Places API (New) fallback to legacy Text Search: {e}")
+        logger.info(f"Places API (New) exact search note: {e}")
 
-    # If the exact rare ingredient query returned fewer than 6 local spots within 35 miles,
-    # supplement with local venues in the same drink category so the user gets full local coverage.
-    if len(collected) < 6 and keywords.strip():
-        fallback_query = _build_local_category_fallback_query(keywords)
-        if fallback_query.lower() != search_query.lower():
-            try:
-                more = _search_places_new(api_key, fallback_query, lat, lon, radius_m=20000.0)
-                for r in more:
-                    if r["id"] not in seen_ids:
-                        seen_ids.add(r["id"])
-                        collected.append(r)
-            except Exception:
-                pass
+    # Stage 2: Potential Local Matches (nearby specialty spots in the same drink/cocktail/tea category within 55 miles)
+    if kw_clean:
+        fallback_query = _build_local_category_fallback_query(kw_clean)
+        try:
+            more = _search_places_new(api_key, fallback_query, lat, lon, radius_m=40000.0)
+            for r in more:
+                if r["id"] not in seen_ids:
+                    r["match_tier"] = "potential"
+                    if "Potential Match" not in r["tags"]:
+                        r["tags"].insert(0, "Potential Match")
+                    seen_ids.add(r["id"])
+                    collected.append(r)
+        except Exception:
+            pass
 
     if collected:
-        return collected[:15]
+        return collected[:18]
 
     try:
-        return _search_places_legacy(api_key, search_query, lat, lon)
+        legacy = _search_places_legacy(api_key, search_query, lat, lon)
+        for r in legacy:
+            r["match_tier"] = "exact"
+        return legacy
     except Exception as e:
         logger.warning(f"Google Places scraper error: {e}")
         return []
