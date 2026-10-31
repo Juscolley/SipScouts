@@ -23,6 +23,15 @@ const EMPTY: Profile = {
 
 const MAX_FAVORITES = 5
 
+function isProfilePopulated(p: Profile): boolean {
+  return Boolean(
+    p.name.trim() ||
+    p.zip_code.trim() ||
+    p.favorite_drinks.length > 0 ||
+    p.favorite_ingredients.length > 0
+  )
+}
+
 function TagInput({
   label,
   values,
@@ -94,6 +103,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [hasExistingProfile, setHasExistingProfile] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [badgeCopied, setBadgeCopied] = useState(false)
   const { bookmarks, toggle, userId, isAdmin } = useBookmarks()
 
@@ -153,19 +164,46 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    try {
+      localStorage.removeItem('sipscouts_profile_v1')
+    } catch {
+      // Ignore
+    }
+    window.location.href = '/discover'
+  }
+
+  function buildQuickSearchHref(opts: { drink?: string; ingredient?: string }) {
+    const params = new URLSearchParams()
+    if (opts.drink) params.set('drink', opts.drink)
+    if (opts.ingredient) params.set('ingredient', opts.ingredient)
+    if (profile.zip_code.trim()) params.set('zip', profile.zip_code.trim())
+    params.set('autosearch', '1')
+    return `/discover?${params.toString()}`
+  }
+
   useEffect(() => {
+    let initialPopulated = false
     // Load local backup immediately if present
     try {
       const localRaw = localStorage.getItem('sipscouts_profile_v1')
       if (localRaw) {
         const parsed = JSON.parse(localRaw)
-        setProfile(prev => ({
-          name: parsed.name ?? prev.name,
-          zip_code: parsed.zip_code ?? prev.zip_code,
-          mobile: parsed.mobile ?? prev.mobile,
-          favorite_drinks: (parsed.favorite_drinks ?? prev.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
-          favorite_ingredients: (parsed.favorite_ingredients ?? prev.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
-        }))
+        const candidate: Profile = {
+          name: parsed.name ?? '',
+          zip_code: parsed.zip_code ?? '',
+          mobile: parsed.mobile ?? '',
+          favorite_drinks: (parsed.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
+          favorite_ingredients: (parsed.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
+        }
+        setProfile(candidate)
+        if (isProfilePopulated(candidate)) {
+          initialPopulated = true
+          setHasExistingProfile(true)
+          setIsEditing(false)
+        }
       }
     } catch {
       // Ignore storage errors
@@ -173,32 +211,40 @@ export default function ProfilePage() {
 
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setEmail(user.email ?? '')
-        supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              const loaded = {
-                name: data.name ?? '',
-                zip_code: data.zip_code ?? '',
-                mobile: data.mobile ?? '',
-                favorite_drinks: (data.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
-                favorite_ingredients: (data.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
-              }
-              setProfile(loaded)
-              try {
-                localStorage.setItem('sipscouts_profile_v1', JSON.stringify(loaded))
-              } catch {
-                // Ignore
-              }
-            }
-          })
+      if (!user) {
+        setLoading(false)
+        return
       }
-      setLoading(false)
+      setEmail(user.email ?? '')
+      supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            const loaded: Profile = {
+              name: data.name ?? '',
+              zip_code: data.zip_code ?? '',
+              mobile: data.mobile ?? '',
+              favorite_drinks: (data.favorite_drinks ?? []).slice(0, MAX_FAVORITES),
+              favorite_ingredients: (data.favorite_ingredients ?? []).slice(0, MAX_FAVORITES),
+            }
+            setProfile(loaded)
+            const populated = isProfilePopulated(loaded)
+            setHasExistingProfile(populated)
+            setIsEditing(!populated)
+            try {
+              localStorage.setItem('sipscouts_profile_v1', JSON.stringify(loaded))
+            } catch {
+              // Ignore
+            }
+          } else if (!initialPopulated) {
+            setHasExistingProfile(false)
+            setIsEditing(true)
+          }
+          setLoading(false)
+        })
     })
   }, [])
 
@@ -233,6 +279,7 @@ export default function ProfilePage() {
 
     setSaving(false)
     setSaved(true)
+    setHasExistingProfile(isProfilePopulated(cleanProfile))
     // Automatically take the user back to their Search Results (or Search page) after saving!
     setTimeout(() => {
       window.location.href = '/discover'
@@ -246,6 +293,8 @@ export default function ProfilePage() {
       </div>
     )
   }
+
+  const displayName = profile.name.trim() || (email ? email.split('@')[0] : 'Scout')
 
   return (
     <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
@@ -268,9 +317,9 @@ export default function ProfilePage() {
       </header>
 
       <div style={{ position: 'relative', zIndex: 10 }}>
-        <main className="warm-main" style={{ maxWidth: 740 }}>
-          {/* Prominent Back to Search Results button */}
-          <div style={{ marginBottom: '1.25rem' }}>
+        <main className="warm-main" style={{ maxWidth: 760 }}>
+          {/* Top Navigation & Sign-Out Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <a
               href="/discover"
               className="warm-btn-ghost"
@@ -290,28 +339,84 @@ export default function ProfilePage() {
             >
               ← Back to Your Search Results
             </a>
+
+            {email && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {hasExistingProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(prev => !prev)}
+                    className="warm-btn-ghost"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.92)',
+                      borderRadius: 99,
+                      padding: '0.45rem 0.95rem',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isEditing ? '✓ View Member Hub' : '✏️ Edit Profile'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="warm-btn-ghost"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.88)',
+                    borderRadius: 99,
+                    padding: '0.45rem 0.95rem',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    color: '#a93226',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🚪 Sign Out
+                </button>
+              </div>
+            )}
           </div>
 
-          <h1 className="hero-title" style={{ marginBottom: '0.3rem' }}>Your Profile &amp; Saved Places</h1>
-          {email && <p className="hero-note" style={{ marginBottom: '1.75rem' }}>✓ Signed in as {email}</p>}
+          <h1 className="hero-title" style={{ marginBottom: '0.3rem' }}>
+            {email
+              ? hasExistingProfile && !isEditing
+                ? `Welcome back, ${displayName}! 👋`
+                : hasExistingProfile
+                ? 'Edit Your Profile & Favorites'
+                : 'Set Up Your Free SipScouts Profile'
+              : 'Your Profile & Saved Places'}
+          </h1>
+          {email && (
+            <p className="hero-note" style={{ marginBottom: '1.75rem' }}>
+              ✓ Signed in as <strong>{email}</strong>
+              {profile.zip_code.trim() ? ` · 📍 Home Base: ${profile.zip_code.trim()}` : ''}
+            </p>
+          )}
 
           {!email ? (
             <div className="glass" style={{ padding: '3rem 2rem', textAlign: 'center', marginTop: '1.25rem' }}>
               <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✨</p>
-              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.5rem', marginBottom: '0.6rem', color: 'var(--text-main)' }}>
-                Create Your Free SipScouts Profile
+              <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.55rem', marginBottom: '0.6rem', color: 'var(--text-main)' }}>
+                Sign In to Your Profile or Join Free
               </h2>
               <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.95rem', color: 'var(--text-light)', maxWidth: 480, margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
-                Anyone can search SipScouts instantly! Creating a free profile with your email (no password needed) lets you:
+                Anyone can search SipScouts instantly! Sign in to your existing profile or create a free one with your email (no password needed) to:
               </p>
               <ul style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-main)', textAlign: 'left', maxWidth: 380, margin: '0 auto 1.75rem', lineHeight: 1.8, listStyle: 'none', padding: 0 }}>
                 <li>🔖 <strong>Save &amp; Bookmark</strong> your favorite cafés, tea houses, and bars</li>
                 <li>🗺️ <strong>View your Saved spots</strong> anytime on your personal map</li>
-                <li>☕ <strong>Save up to 5 Favorite Drinks &amp; 5 Ingredients</strong></li>
+                <li>⚡ <strong>1-Tap Search</strong> your saved Favorite Drinks &amp; Ingredients</li>
               </ul>
-              <a href="/login" className="warm-btn" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.9rem 1.75rem' }}>
-                ✨ Join Free · Sign In
-              </a>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <a href="/login?mode=signin" className="warm-btn" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.85rem 1.65rem' }}>
+                  🔑 Sign In (Existing Profile)
+                </a>
+                <a href="/login?mode=join" className="warm-btn-ghost" style={{ display: 'inline-block', textDecoration: 'none', padding: '0.85rem 1.65rem', background: 'rgba(255,255,255,0.9)' }}>
+                  ✨ Join Free (New Profile)
+                </a>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -380,7 +485,150 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Saved Places Summary right at the top after Magic Link sign-in */}
+              {/* RETURNING MEMBER HUB VIEW (Shown automatically when profile is already set up and not actively editing) */}
+              {hasExistingProfile && !isEditing && (
+                <>
+                  {/* 1-Tap Quick Scout Card for Saved Favorites */}
+                  <div className="glass" style={{ padding: '1.75rem', borderRadius: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <h2 className="section-title" style={{ margin: 0 }}>
+                          ⚡ 1-Tap Quick Scout — Your Saved Favorites
+                        </h2>
+                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.2rem' }}>
+                          Tap any of your saved drinks or ingredients below to immediately scout nearby spots
+                          {profile.zip_code.trim() ? ` around ${profile.zip_code.trim()}` : ''}:
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        className="warm-btn-ghost"
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', borderRadius: 99 }}
+                      >
+                        + Add / Edit Favorites
+                      </button>
+                    </div>
+
+                    {profile.favorite_drinks.length === 0 && profile.favorite_ingredients.length === 0 ? (
+                      <div style={{ padding: '1rem', background: 'rgba(226, 114, 91, 0.08)', borderRadius: 12 }}>
+                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.86rem', color: 'var(--text-main)', margin: 0 }}>
+                          You haven&apos;t added your Favorite Drinks or Ingredients yet.{' '}
+                          <button
+                            type="button"
+                            onClick={() => setIsEditing(true)}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                          >
+                            Add up to 5 of each →
+                          </button>
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+                        {profile.favorite_drinks.length > 0 && (
+                          <div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
+                              ☕🍸 Favorite Drinks (Tap to Search)
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {profile.favorite_drinks.map(d => (
+                                <a
+                                  key={d}
+                                  href={buildQuickSearchHref({ drink: d })}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    background: 'var(--primary)',
+                                    color: '#fff',
+                                    textDecoration: 'none',
+                                    padding: '0.48rem 0.95rem',
+                                    borderRadius: 99,
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '0.84rem',
+                                    fontWeight: 600,
+                                    boxShadow: '0 3px 10px rgba(226, 114, 91, 0.28)',
+                                  }}
+                                >
+                                  🔍 Scout &ldquo;{d}&rdquo; →
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {profile.favorite_ingredients.length > 0 && (
+                          <div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
+                              ✨ Favorite Ingredients (Tap to Search)
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {profile.favorite_ingredients.map(ing => (
+                                <a
+                                  key={ing}
+                                  href={buildQuickSearchHref({ ingredient: ing })}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    background: 'rgba(74, 46, 32, 0.9)',
+                                    color: '#FAF3E8',
+                                    textDecoration: 'none',
+                                    padding: '0.48rem 0.95rem',
+                                    borderRadius: 99,
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '0.84rem',
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  ✨ Scout &ldquo;{ing}&rdquo; →
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Member Profile Summary Card */}
+                  <div className="glass" style={{ padding: '1.5rem 1.75rem', borderRadius: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                      <h2 className="section-title" style={{ margin: 0 }}>👤 Your Member Profile</h2>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        className="warm-btn-ghost"
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem', borderRadius: 99 }}
+                      >
+                        ✏️ Edit Profile Details
+                      </button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.9rem', fontFamily: 'Inter, sans-serif', fontSize: '0.88rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Name</div>
+                        <div style={{ color: 'var(--text-main)', fontWeight: 600, marginTop: '0.15rem' }}>{profile.name.trim() || 'Not set'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Verified Email</div>
+                        <div style={{ color: 'var(--text-main)', fontWeight: 600, marginTop: '0.15rem' }}>{email}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Home City / ZIP</div>
+                        <div style={{ color: 'var(--text-main)', fontWeight: 600, marginTop: '0.15rem' }}>{profile.zip_code.trim() || 'Using live GPS'}</div>
+                      </div>
+                      {profile.mobile.trim() && (
+                        <div>
+                          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Phone</div>
+                          <div style={{ color: 'var(--text-main)', fontWeight: 600, marginTop: '0.15rem' }}>{profile.mobile}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Saved Places Summary */}
               <div className="glass" style={{ padding: '1.75rem', borderRadius: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <h2 className="section-title" style={{ margin: 0 }}>🔖 Your Saved Places ({bookmarks.length})</h2>
@@ -414,96 +662,111 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Profile Details Form */}
-              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h2 className="section-title">Your Info</h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-                    <div>
-                      <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Full Name</label>
-                      <input
-                        className="warm-input"
-                        type="text"
-                        placeholder="Your name"
-                        value={profile.name}
-                        onChange={e => setProfile({ ...profile, name: e.target.value })}
-                      />
+              {/* Editable Profile Form (Shown automatically for brand-new users OR when an existing user clicks "Edit Profile") */}
+              {(!hasExistingProfile || isEditing) && (
+                <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <h2 className="section-title" style={{ margin: 0 }}>
+                        {hasExistingProfile ? '✏️ Update Your Profile Info' : '✨ Complete Your Free Profile'}
+                      </h2>
+                      {hasExistingProfile && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditing(false)}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Cancel Editing
+                        </button>
+                      )}
                     </div>
-                    <div>
-                      <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Email (Verified)</label>
-                      <input
-                        className="warm-input"
-                        type="email"
-                        value={email}
-                        readOnly
-                        style={{ background: 'rgba(74, 46, 32, 0.06)', color: 'var(--text-light)', cursor: 'default' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Home City or ZIP</label>
-                      <input
-                        className="warm-input"
-                        type="text"
-                        placeholder="e.g. Austin, TX or 10001"
-                        value={profile.zip_code}
-                        onChange={e => setProfile({ ...profile, zip_code: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Phone # (Optional)</label>
-                      <input
-                        className="warm-input"
-                        type="tel"
-                        placeholder="+1 555 000 0000"
-                        value={profile.mobile}
-                        onChange={e => setProfile({ ...profile, mobile: e.target.value })}
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Full Name</label>
+                        <input
+                          className="warm-input"
+                          type="text"
+                          placeholder="Your name"
+                          value={profile.name}
+                          onChange={e => setProfile({ ...profile, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Email (Verified)</label>
+                        <input
+                          className="warm-input"
+                          type="email"
+                          value={email}
+                          readOnly
+                          style={{ background: 'rgba(74, 46, 32, 0.06)', color: 'var(--text-light)', cursor: 'default' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Home City or ZIP</label>
+                        <input
+                          className="warm-input"
+                          type="text"
+                          placeholder="e.g. Norfolk, VA or 23510"
+                          value={profile.zip_code}
+                          onChange={e => setProfile({ ...profile, zip_code: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="section-title" style={{ display: 'block', marginBottom: '0.3rem' }}>Phone # (Optional)</label>
+                        <input
+                          className="warm-input"
+                          type="tel"
+                          placeholder="+1 555 000 0000"
+                          value={profile.mobile}
+                          onChange={e => setProfile({ ...profile, mobile: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Favorites (Capped at 5 each) */}
-                <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <h2 className="section-title">Your Favorites (Up to 5 Each)</h2>
-                  <TagInput
-                    label="Favorite Drinks (Up to 5)"
-                    values={profile.favorite_drinks}
-                    onChange={v => setProfile({ ...profile, favorite_drinks: v })}
-                    placeholder="e.g. Oat Latte, Matcha, Mezcal Negroni…"
-                    maxItems={5}
-                  />
-                  <TagInput
-                    label="Favorite Ingredients (Up to 5)"
-                    values={profile.favorite_ingredients}
-                    onChange={v => setProfile({ ...profile, favorite_ingredients: v })}
-                    placeholder="e.g. Cardamom, Yuzu, Pistachio, Lavender…"
-                    maxItems={5}
-                  />
-                </div>
+                  {/* Favorites (Capped at 5 each) */}
+                  <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <h2 className="section-title">Your Favorites (Up to 5 Each)</h2>
+                    <TagInput
+                      label="Favorite Drinks (Up to 5)"
+                      values={profile.favorite_drinks}
+                      onChange={v => setProfile({ ...profile, favorite_drinks: v })}
+                      placeholder="e.g. Oat Latte, Matcha, Saffron Martini…"
+                      maxItems={5}
+                    />
+                    <TagInput
+                      label="Favorite Ingredients (Up to 5)"
+                      values={profile.favorite_ingredients}
+                      onChange={v => setProfile({ ...profile, favorite_ingredients: v })}
+                      placeholder="e.g. Cardamom, Yuzu, Pistachio, Lavender…"
+                      maxItems={5}
+                    />
+                  </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <button type="submit" className="warm-btn" style={{ flex: '2 1 220px', fontSize: '1.05rem', padding: '1rem' }} disabled={saving}>
-                    {saving ? 'Saving Profile…' : saved ? '✅ Profile Saved! Taking you to Search…' : 'Save Profile & Return to Search →'}
-                  </button>
-                  <a
-                    href="/discover"
-                    className="warm-btn-ghost"
-                    style={{
-                      flex: '1 1 180px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'rgba(255,255,255,0.9)',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      padding: '1rem',
-                      borderRadius: 12,
-                    }}
-                  >
-                    ← Back to Search Results
-                  </a>
-                </div>
-              </form>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <button type="submit" className="warm-btn" style={{ flex: '2 1 220px', fontSize: '1.05rem', padding: '1rem' }} disabled={saving}>
+                      {saving ? 'Saving Profile…' : saved ? '✅ Profile Saved! Taking you to Search…' : 'Save Profile & Return to Search →'}
+                    </button>
+                    <a
+                      href="/discover"
+                      className="warm-btn-ghost"
+                      style={{
+                        flex: '1 1 180px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(255,255,255,0.9)',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        padding: '1rem',
+                        borderRadius: 12,
+                      }}
+                    >
+                      ← Back to Search Results
+                    </a>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </main>

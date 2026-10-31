@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
+import { createClient } from '@/lib/supabase'
 import { trackVenueAction } from '@/lib/analytics'
 import NotificationBell from '@/components/NotificationBell'
 import InstallAppButton from '@/components/InstallAppButton'
@@ -26,6 +27,13 @@ interface Venue {
   distanceKm?: number
 }
 
+interface MemberProfileSummary {
+  name: string
+  zip_code: string
+  favorite_drinks: string[]
+  favorite_ingredients: string[]
+}
+
 const SEARCH_STORAGE_KEY = 'sipscouts_last_search_v1'
 
 export default function DiscoverPage() {
@@ -38,7 +46,7 @@ export default function DiscoverPage() {
   const [searched, setSearched] = useState(false)
   const [statusIndex, setStatusIndex] = useState(0)
   const [profilePromptVenue, setProfilePromptVenue] = useState<string | null>(null)
-  const [sharedVenueName, setSharedVenueName] = useState<string | null>(null)
+  const [memberProfile, setMemberProfile] = useState<MemberProfileSummary | null>(null)
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn, userId, isAdmin } = useBookmarks()
@@ -52,62 +60,30 @@ export default function DiscoverPage() {
     `🗺️ Ranking discovered spots by distance from you…`,
   ]
 
-  // Restore last search from sessionStorage when user returns from Profile / Saved / Magic Link
-  useEffect(() => {
-    const hash = window.location.hash || ''
-    const search = window.location.search || ''
-    if (hash.includes('access_token=') || search.includes('code=') || search.includes('token_hash=')) {
-      window.location.replace(`/auth/callback${search}${hash}`)
-      return
-    }
-
-    try {
-      const savedRaw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
-      if (savedRaw) {
-        const parsed = JSON.parse(savedRaw)
-        if (parsed && Array.isArray(parsed.venues) && parsed.searched) {
-          setDrink(parsed.drink ?? '')
-          setIngredient(parsed.ingredient ?? '')
-          setLocationInput(parsed.locationInput ?? '')
-          setSearchCenter(parsed.searchCenter ?? null)
-          setVenues(parsed.venues)
-          setSearched(true)
-        }
-      }
-    } catch {
-      // Ignore storage errors
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!loading) {
-      setStatusIndex(0)
-      return
-    }
-    const interval = setInterval(() => {
-      setStatusIndex(prev => (prev + 1) % scoutingMessages.length)
-    }, 2200)
-    return () => clearInterval(interval)
-  }, [loading, scoutingMessages.length])
-
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
+  async function executeSearch(opts: {
+    drinkVal: string
+    ingredientVal: string
+    locationVal: string
+  }) {
+    setDrink(opts.drinkVal)
+    setIngredient(opts.ingredientVal)
+    setLocationInput(opts.locationVal)
     setLoading(true)
     setSearched(true)
+
     try {
       const params = new URLSearchParams()
-      if (drink) params.set('drink', drink)
-      if (ingredient) params.set('ingredient', ingredient)
+      if (opts.drinkVal.trim()) params.set('drink', opts.drinkVal.trim())
+      if (opts.ingredientVal.trim()) params.set('ingredient', opts.ingredientVal.trim())
       if (userId) params.set('user_id', userId)
       if (geo.cityLabel) params.set('city', geo.cityLabel)
 
       let activeLat = geo.latitude
       let activeLng = geo.longitude
 
-      if (locationInput.trim()) {
-        params.set('zip_code', locationInput.trim())
+      if (opts.locationVal.trim()) {
+        params.set('zip_code', opts.locationVal.trim())
       } else {
-        // If user clicked Search while GPS is still initializing, grab client IP coordinates immediately so it never defaults to NYC
         if (activeLat === null || activeLng === null) {
           try {
             const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json')
@@ -148,9 +124,9 @@ export default function DiscoverPage() {
         sessionStorage.setItem(
           SEARCH_STORAGE_KEY,
           JSON.stringify({
-            drink,
-            ingredient,
-            locationInput,
+            drink: opts.drinkVal,
+            ingredient: opts.ingredientVal,
+            locationInput: opts.locationVal,
             searchCenter: newCenter,
             venues: results,
             searched: true,
@@ -166,54 +142,115 @@ export default function DiscoverPage() {
     }
   }
 
-  async function handleShareVenue(v: Venue) {
-    const sipLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || (v.type === 'bar' ? 'Craft Cocktails' : 'Specialty Coffee & Tea')
-    const cityLabel = locationInput.trim() || geo.cityLabel || ''
-    const badgeLabel = v.type === 'bar' ? 'Speakeasy Scout' : 'Neighborhood Sip Scout'
+  // Restore last search from sessionStorage OR execute 1-Tap Quick Scout from /profile URL params
+  useEffect(() => {
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    if (hash.includes('access_token=') || search.includes('code=') || search.includes('token_hash=')) {
+      window.location.replace(`/auth/callback${search}${hash}`)
+      return
+    }
 
-    trackVenueAction({
-      venue_name: v.name,
-      venue_address: v.address,
-      venue_type: v.type,
-      action_type: 'share_venue',
-      searched_drink: drink.trim(),
-      searched_ingredient: ingredient.trim(),
-      city: cityLabel,
-      zip_code: locationInput.trim(),
-      latitude: v.lat,
-      longitude: v.lng,
-      user_id: userId,
-    })
+    const urlParams = new URLSearchParams(search)
+    const urlDrink = urlParams.get('drink') || ''
+    const urlIngredient = urlParams.get('ingredient') || ''
+    const urlZip = urlParams.get('zip') || ''
+    const autoSearch = urlParams.get('autosearch') === '1'
 
-    const shareParams = new URLSearchParams()
-    shareParams.set('badge', badgeLabel)
-    shareParams.set('venue', v.name)
-    shareParams.set('address', v.address)
-    shareParams.set('drink', sipLabel)
-    if (cityLabel) shareParams.set('city', cityLabel)
-    const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
-    const shareText = `🥂 I just scouted ${sipLabel} at ${v.name}${cityLabel ? ` (${cityLabel})` : ''} on SipScouts! Tap to check it out or claim your Scout Badge:`
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${v.name} on SipScouts`,
-          text: shareText,
-          url: shareUrl,
-        })
-        return
-      } catch {
-        // Fallback to clipboard copy
-      }
+    if (autoSearch && (urlDrink || urlIngredient)) {
+      // Clean URL query params while preserving browser back button
+      window.history.replaceState({}, '', '/discover')
+      executeSearch({
+        drinkVal: urlDrink,
+        ingredientVal: urlIngredient,
+        locationVal: urlZip,
+      })
+      return
     }
 
     try {
-      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
-      setSharedVenueName(v.name)
-      setTimeout(() => setSharedVenueName(null), 3000)
+      const savedRaw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
+      if (savedRaw) {
+        const parsed = JSON.parse(savedRaw)
+        if (parsed && Array.isArray(parsed.venues) && parsed.searched) {
+          setDrink(parsed.drink ?? '')
+          setIngredient(parsed.ingredient ?? '')
+          setLocationInput(parsed.locationInput ?? '')
+          setSearchCenter(parsed.searchCenter ?? null)
+          setVenues(parsed.venues)
+          setSearched(true)
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Load Returning Member's Profile (Name, Home ZIP, and Favorite Drinks/Ingredients)
+  useEffect(() => {
+    try {
+      const localRaw = localStorage.getItem('sipscouts_profile_v1')
+      if (localRaw) {
+        const parsed = JSON.parse(localRaw)
+        const summary: MemberProfileSummary = {
+          name: parsed.name ?? '',
+          zip_code: parsed.zip_code ?? '',
+          favorite_drinks: Array.isArray(parsed.favorite_drinks) ? parsed.favorite_drinks : [],
+          favorite_ingredients: Array.isArray(parsed.favorite_ingredients) ? parsed.favorite_ingredients : [],
+        }
+        setMemberProfile(summary)
+        setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
+      }
     } catch {
       // Ignore
     }
+
+    if (!isLoggedIn || !userId) return
+
+    const supabase = createClient()
+    supabase
+      .from('users')
+      .select('name, zip_code, favorite_drinks, favorite_ingredients')
+      .eq('id', userId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const summary: MemberProfileSummary = {
+            name: data.name ?? '',
+            zip_code: data.zip_code ?? '',
+            favorite_drinks: Array.isArray(data.favorite_drinks) ? data.favorite_drinks : [],
+            favorite_ingredients: Array.isArray(data.favorite_ingredients) ? data.favorite_ingredients : [],
+          }
+          setMemberProfile(summary)
+          setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
+          try {
+            localStorage.setItem('sipscouts_profile_v1', JSON.stringify(summary))
+          } catch {
+            // Ignore
+          }
+        }
+      })
+  }, [isLoggedIn, userId])
+
+  useEffect(() => {
+    if (!loading) {
+      setStatusIndex(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setStatusIndex(prev => (prev + 1) % scoutingMessages.length)
+    }, 2200)
+    return () => clearInterval(interval)
+  }, [loading, scoutingMessages.length])
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    await executeSearch({
+      drinkVal: drink,
+      ingredientVal: ingredient,
+      locationVal: locationInput,
+    })
   }
 
   return (
@@ -237,7 +274,10 @@ export default function DiscoverPage() {
             {isLoggedIn ? (
               <a href="/profile" className="nav-btn">My Profile ✓</a>
             ) : (
-              <a href="/login" className="nav-btn">Join Free · Sign In</a>
+              <>
+                <a href="/login?mode=signin">Sign In</a>
+                <a href="/login?mode=join" className="nav-btn">Join Free</a>
+              </>
             )}
           </nav>
         </div>
@@ -345,13 +385,93 @@ export default function DiscoverPage() {
           <NotificationBell />
         </div>
 
-        {/* Instant-Use + Free Profile Perks Callout */}
-        {!isLoggedIn && (
-          <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1.5rem 2.25rem', textAlign: 'center' }}>
+        {/* Returning Signed-In Member 1-Tap Favorites Bar */}
+        {isLoggedIn && memberProfile && (memberProfile.favorite_drinks.length > 0 || memberProfile.favorite_ingredients.length > 0) && (
+          <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 1.5rem 1.75rem' }}>
             <div
               className="glass"
               style={{
-                padding: '0.75rem 1.15rem',
+                padding: '0.85rem 1.2rem',
+                borderRadius: 16,
+                background: 'rgba(255, 255, 255, 0.92)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.55rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontFamily: 'Inter, sans-serif', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
+                  👋 Welcome back{memberProfile.name.trim() ? `, ${memberProfile.name.trim()}` : ''}! <strong>1-Tap Scout your saved favorites:</strong>
+                </span>
+                <a href="/profile" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.78rem', textDecoration: 'none' }}>
+                  Edit Favorites →
+                </a>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                {memberProfile.favorite_drinks.map(favDrink => (
+                  <button
+                    key={`drink-${favDrink}`}
+                    type="button"
+                    onClick={() =>
+                      executeSearch({
+                        drinkVal: favDrink,
+                        ingredientVal: '',
+                        locationVal: locationInput.trim() || memberProfile.zip_code.trim(),
+                      })
+                    }
+                    style={{
+                      border: 'none',
+                      borderRadius: 99,
+                      padding: '0.35rem 0.85rem',
+                      background: 'var(--primary)',
+                      color: '#fff',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ☕ {favDrink}
+                  </button>
+                ))}
+                {memberProfile.favorite_ingredients.map(favIng => (
+                  <button
+                    key={`ing-${favIng}`}
+                    type="button"
+                    onClick={() =>
+                      executeSearch({
+                        drinkVal: '',
+                        ingredientVal: favIng,
+                        locationVal: locationInput.trim() || memberProfile.zip_code.trim(),
+                      })
+                    }
+                    style={{
+                      border: 'none',
+                      borderRadius: 99,
+                      padding: '0.35rem 0.85rem',
+                      background: 'rgba(74, 46, 32, 0.9)',
+                      color: '#FAF3E8',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✨ {favIng}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Instant-Use + Free Profile / Sign-In Callout */}
+        {!isLoggedIn && (
+          <div style={{ maxWidth: 700, margin: '0 auto', padding: '0 1.5rem 2.25rem', textAlign: 'center' }}>
+            <div
+              className="glass"
+              style={{
+                padding: '0.8rem 1.2rem',
                 borderRadius: 16,
                 background: 'rgba(255, 255, 255, 0.88)',
                 fontFamily: 'Inter, sans-serif',
@@ -364,23 +484,40 @@ export default function DiscoverPage() {
               <a href="/bookmarks" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
                 Saved spots
               </a>
-              , and store your <strong>Favorite Drinks &amp; Ingredients</strong>?{' '}
-              <a
-                href="/login"
-                style={{
-                  display: 'inline-block',
-                  marginLeft: '0.25rem',
-                  color: '#fff',
-                  background: 'var(--primary)',
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 99,
-                  fontWeight: 600,
-                  fontSize: '0.78rem',
-                  textDecoration: 'none',
-                }}
-              >
-                Create Free Profile →
-              </a>
+              , and 1-tap search your <strong>Favorite Drinks &amp; Ingredients</strong>?{' '}
+              <span style={{ display: 'inline-flex', gap: '0.4rem', flexWrap: 'wrap', marginLeft: '0.25rem', verticalAlign: 'middle' }}>
+                <a
+                  href="/login?mode=signin"
+                  style={{
+                    display: 'inline-block',
+                    color: 'var(--text-main)',
+                    background: 'rgba(74, 46, 32, 0.1)',
+                    border: '1px solid rgba(74, 46, 32, 0.25)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: 99,
+                    fontWeight: 600,
+                    fontSize: '0.78rem',
+                    textDecoration: 'none',
+                  }}
+                >
+                  🔑 Sign In
+                </a>
+                <a
+                  href="/login?mode=join"
+                  style={{
+                    display: 'inline-block',
+                    color: '#fff',
+                    background: 'var(--primary)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: 99,
+                    fontWeight: 600,
+                    fontSize: '0.78rem',
+                    textDecoration: 'none',
+                  }}
+                >
+                  ✨ Create Free Profile →
+                </a>
+              </span>
             </div>
           </div>
         )}
@@ -644,21 +781,28 @@ export default function DiscoverPage() {
               Save &ldquo;{profilePromptVenue}&rdquo;
             </h3>
             <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-light)', lineHeight: 1.55, marginBottom: '1.25rem' }}>
-              Create a free SipScouts Profile (just enter your email — no password needed!) to bookmark favorite spots, view your <strong>Saved</strong> map, and save up to 5 <strong>Favorite Drinks &amp; Ingredients</strong>.
+              Sign in to your existing SipScouts profile or create a free one (no password needed!) to bookmark favorite spots, view your <strong>Saved</strong> map, and save up to 5 <strong>Favorite Drinks &amp; Ingredients</strong>.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <a
-                href="/login"
+                href="/login?mode=signin"
                 className="warm-btn"
                 style={{ width: '100%', textDecoration: 'none', display: 'inline-block', padding: '0.75rem 1rem' }}
               >
-                ✨ Join Free · Sign In
+                🔑 Sign In (Existing Profile)
+              </a>
+              <a
+                href="/login?mode=join"
+                className="warm-btn-ghost"
+                style={{ width: '100%', textDecoration: 'none', display: 'inline-block', padding: '0.7rem 1rem', background: 'rgba(255,255,255,0.9)' }}
+              >
+                ✨ Join Free (New Profile)
               </a>
               <button
                 type="button"
                 onClick={() => setProfilePromptVenue(null)}
                 className="warm-btn-ghost"
-                style={{ width: '100%', padding: '0.55rem 1rem', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '0.55rem 1rem', cursor: 'pointer', border: 'none' }}
               >
                 Continue Scouting
               </button>
