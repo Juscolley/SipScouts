@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
+import { trackVenueAction } from '@/lib/analytics'
 import NotificationBell from '@/components/NotificationBell'
 import InstallAppButton from '@/components/InstallAppButton'
 
@@ -36,9 +37,10 @@ export default function DiscoverPage() {
   const [searched, setSearched] = useState(false)
   const [statusIndex, setStatusIndex] = useState(0)
   const [profilePromptVenue, setProfilePromptVenue] = useState<string | null>(null)
+  const [sharedVenueName, setSharedVenueName] = useState<string | null>(null)
 
   const geo = useGeolocation()
-  const { isBookmarked, toggle, isLoggedIn } = useBookmarks()
+  const { isBookmarked, toggle, isLoggedIn, userId } = useBookmarks()
 
   const queryLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'your perfect sip'
   const scoutingMessages = [
@@ -95,6 +97,8 @@ export default function DiscoverPage() {
       const params = new URLSearchParams()
       if (drink) params.set('drink', drink)
       if (ingredient) params.set('ingredient', ingredient)
+      if (userId) params.set('user_id', userId)
+      if (geo.cityLabel) params.set('city', geo.cityLabel)
 
       let activeLat = geo.latitude
       let activeLng = geo.longitude
@@ -157,6 +161,56 @@ export default function DiscoverPage() {
       setVenues([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleShareVenue(v: Venue) {
+    const sipLabel = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || (v.type === 'bar' ? 'Craft Cocktails' : 'Specialty Coffee & Tea')
+    const cityLabel = locationInput.trim() || geo.cityLabel || ''
+    const badgeLabel = v.type === 'bar' ? 'Speakeasy Scout' : 'Neighborhood Sip Scout'
+
+    trackVenueAction({
+      venue_name: v.name,
+      venue_address: v.address,
+      venue_type: v.type,
+      action_type: 'share_venue',
+      searched_drink: drink.trim(),
+      searched_ingredient: ingredient.trim(),
+      city: cityLabel,
+      zip_code: locationInput.trim(),
+      latitude: v.lat,
+      longitude: v.lng,
+      user_id: userId,
+    })
+
+    const shareParams = new URLSearchParams()
+    shareParams.set('badge', badgeLabel)
+    shareParams.set('venue', v.name)
+    shareParams.set('address', v.address)
+    shareParams.set('drink', sipLabel)
+    if (cityLabel) shareParams.set('city', cityLabel)
+    const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
+    const shareText = `🥂 I just scouted ${sipLabel} at ${v.name}${cityLabel ? ` (${cityLabel})` : ''} on SipScouts! Tap to check it out or claim your Scout Badge:`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${v.name} on SipScouts`,
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      } catch {
+        // Fallback to clipboard copy
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+      setSharedVenueName(v.name)
+      setTimeout(() => setSharedVenueName(null), 3000)
+    } catch {
+      // Ignore
     }
   }
 
@@ -395,53 +449,111 @@ export default function DiscoverPage() {
 
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
 
-                    {/* Compact Action Row: Open/Closed Badge + 1-Tap Call + Social / Website Links */}
-                    {(v.open_now !== undefined && v.open_now !== null) || v.phone || v.instagram_url || v.website ? (
-                      <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
-                        {v.open_now === true && (
-                          <span className="tag tag-green" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem' }}>
-                            🟢 Open Now
-                          </span>
-                        )}
-                        {v.open_now === false && (
-                          <span className="tag tag-ghost" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', color: '#a94442' }}>
-                            🔴 Closed
-                          </span>
-                        )}
-                        {v.phone && (
-                          <a
-                            href={`tel:${v.phone}`}
-                            className="tag tag-ghost"
-                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-main)' }}
-                            title={`Call ${v.phone}`}
-                          >
-                            📞 Call
-                          </a>
-                        )}
-                        {v.instagram_url && (
-                          <a
-                            href={v.instagram_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="tag tag-ghost"
-                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--primary)' }}
-                          >
-                            📸 Instagram
-                          </a>
-                        )}
-                        {v.website && (
-                          <a
-                            href={v.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="tag tag-ghost"
-                            style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-light)' }}
-                          >
-                            🌐 Menu / Site
-                          </a>
-                        )}
-                      </div>
-                    ) : null}
+                    {/* Compact Action Row: Open/Closed Badge + 1-Tap Call + Social / Website Links + Viral Share */}
+                    <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
+                      {v.open_now === true && (
+                        <span className="tag tag-green" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem' }}>
+                          🟢 Open Now
+                        </span>
+                      )}
+                      {v.open_now === false && (
+                        <span className="tag tag-ghost" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', color: '#a94442' }}>
+                          🔴 Closed
+                        </span>
+                      )}
+                      {v.phone && (
+                        <a
+                          href={`tel:${v.phone}`}
+                          onClick={() =>
+                            trackVenueAction({
+                              venue_name: v.name,
+                              venue_address: v.address,
+                              venue_type: v.type,
+                              action_type: 'call',
+                              searched_drink: drink.trim(),
+                              searched_ingredient: ingredient.trim(),
+                              city: geo.cityLabel || locationInput.trim(),
+                              zip_code: locationInput.trim(),
+                              latitude: v.lat,
+                              longitude: v.lng,
+                              user_id: userId,
+                            })
+                          }
+                          className="tag tag-ghost"
+                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-main)' }}
+                          title={`Call ${v.phone}`}
+                        >
+                          📞 Call
+                        </a>
+                      )}
+                      {v.instagram_url && (
+                        <a
+                          href={v.instagram_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            trackVenueAction({
+                              venue_name: v.name,
+                              venue_address: v.address,
+                              venue_type: v.type,
+                              action_type: 'instagram',
+                              searched_drink: drink.trim(),
+                              searched_ingredient: ingredient.trim(),
+                              city: geo.cityLabel || locationInput.trim(),
+                              zip_code: locationInput.trim(),
+                              latitude: v.lat,
+                              longitude: v.lng,
+                              user_id: userId,
+                            })
+                          }
+                          className="tag tag-ghost"
+                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--primary)' }}
+                        >
+                          📸 Instagram
+                        </a>
+                      )}
+                      {v.website && (
+                        <a
+                          href={v.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            trackVenueAction({
+                              venue_name: v.name,
+                              venue_address: v.address,
+                              venue_type: v.type,
+                              action_type: 'website',
+                              searched_drink: drink.trim(),
+                              searched_ingredient: ingredient.trim(),
+                              city: geo.cityLabel || locationInput.trim(),
+                              zip_code: locationInput.trim(),
+                              latitude: v.lat,
+                              longitude: v.lng,
+                              user_id: userId,
+                            })
+                          }
+                          className="tag tag-ghost"
+                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-light)' }}
+                        >
+                          🌐 Menu / Site
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleShareVenue(v)}
+                        className="tag"
+                        style={{
+                          fontSize: '0.74rem',
+                          padding: '0.18rem 0.65rem',
+                          fontWeight: 600,
+                          border: '1px solid rgba(226,114,91,0.35)',
+                          cursor: 'pointer',
+                        }}
+                        title="Send a preview card to a friend via text, iMessage, or WhatsApp"
+                      >
+                        {sharedVenueName === v.name ? '✅ Link Copied!' : '🥂 Share / Invite'}
+                      </button>
+                    </div>
 
                     {v.tags.length > 0 && (
                       <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>

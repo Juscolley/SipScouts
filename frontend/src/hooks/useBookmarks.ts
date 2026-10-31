@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
+import { trackVenueAction } from '@/lib/analytics'
 
 export interface Bookmark {
   id: string
@@ -48,6 +49,15 @@ export function useBookmarks() {
         await supabase.from('bookmarks').delete().eq('id', existing.id)
         setBookmarks(b => b.filter(x => x.id !== existing.id))
       } else {
+        trackVenueAction({
+          venue_name: venue.name,
+          venue_address: venue.address,
+          venue_type: venue.type,
+          action_type: 'bookmark',
+          latitude: venue.lat,
+          longitude: venue.lng,
+          user_id: userId,
+        })
         const { data } = await supabase
           .from('bookmarks')
           .insert({
@@ -66,5 +76,5 @@ export function useBookmarks() {
     [userId, bookmarks]
   )
 
-  return { bookmarks, isBookmarked, toggle, isLoggedIn: !!userId }
+  return { bookmarks, isBookmarked, toggle, isLoggedIn: !!userId, userId }
 }

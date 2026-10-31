@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useBookmarks } from '@/hooks/useBookmarks'
+import { trackVenueAction } from '@/lib/analytics'
 
 interface Profile {
   name: string
@@ -93,7 +94,64 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const { bookmarks, toggle } = useBookmarks()
+  const [badgeCopied, setBadgeCopied] = useState(false)
+  const { bookmarks, toggle, userId } = useBookmarks()
+
+  const earnedBadgeName =
+    bookmarks.length >= 3
+      ? 'Neighborhood Tastemaker'
+      : profile.favorite_drinks.some(d => /matcha|tea|chai|hojicha/i.test(d))
+      ? 'Matcha & Tea Maven'
+      : profile.favorite_drinks.some(d => /martini|negroni|mezcal|spritz|margarita|cocktail/i.test(d))
+      ? 'Speakeasy Scout'
+      : 'Founding Sip Scout'
+
+  const sipDnaSummary =
+    [...profile.favorite_drinks.slice(0, 3), ...profile.favorite_ingredients.slice(0, 2)].join(' · ') ||
+    'Specialty Coffee · Ceremonial Matcha · Craft Cocktails'
+
+  async function handleShareBadge() {
+    const scoutName = profile.name.trim() || (email ? email.split('@')[0] : 'A Fellow Scout')
+    trackVenueAction({
+      venue_name: '__BADGE_SHARE__',
+      action_type: 'share_badge',
+      searched_drink: profile.favorite_drinks[0] || '',
+      searched_ingredient: profile.favorite_ingredients[0] || '',
+      city: profile.zip_code.trim(),
+      zip_code: profile.zip_code.trim(),
+      user_id: userId,
+    })
+
+    const shareParams = new URLSearchParams()
+    shareParams.set('badge', earnedBadgeName)
+    shareParams.set('scout', scoutName)
+    shareParams.set('drink', sipDnaSummary)
+    if (profile.zip_code.trim()) shareParams.set('city', profile.zip_code.trim())
+
+    const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
+    const shareText = `🏅 I unlocked the "${earnedBadgeName}" badge on SipScouts! My Sip DNA: ${sipDnaSummary}. Tap to see my badge & claim yours:`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${scoutName}'s SipScouts Badge`,
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+      setBadgeCopied(true)
+      setTimeout(() => setBadgeCopied(false), 3000)
+    } catch {
+      // Ignore
+    }
+  }
 
   useEffect(() => {
     // Load local backup immediately if present
@@ -257,6 +315,71 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Shareable Scout Badge & Sip DNA Card */}
+              <div
+                className="glass"
+                style={{
+                  padding: '1.5rem 1.75rem',
+                  borderRadius: 20,
+                  background: 'linear-gradient(135deg, rgba(74, 46, 32, 0.94) 0%, rgba(42, 24, 16, 0.96) 100%)',
+                  color: '#FAF3E8',
+                  border: '1.5px solid rgba(226, 114, 91, 0.55)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+                    <img
+                      src="/sipscouts-mascot.jpg"
+                      alt="Scout Mascot"
+                      style={{
+                        width: 58,
+                        height: 58,
+                        borderRadius: 14,
+                        objectFit: 'cover',
+                        border: '2px solid #FFCBA4',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          background: 'rgba(226, 114, 91, 0.28)',
+                          border: '1px solid #E2725B',
+                          color: '#FFCBA4',
+                          borderRadius: 99,
+                          padding: '0.18rem 0.65rem',
+                          fontSize: '0.74rem',
+                          fontFamily: 'Inter, sans-serif',
+                          fontWeight: 700,
+                          marginBottom: '0.3rem',
+                        }}
+                      >
+                        🏅 {earnedBadgeName}
+                      </span>
+                      <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.2rem', color: '#FAF3E8', margin: 0 }}>
+                        Your Shareable Scout Badge &amp; Sip DNA
+                      </h3>
+                      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: '#E8D5C4', marginTop: '0.2rem' }}>
+                        <strong>Sip DNA:</strong> {sipDnaSummary}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleShareBadge}
+                    className="warm-btn"
+                    style={{
+                      padding: '0.7rem 1.2rem',
+                      fontSize: '0.88rem',
+                      borderRadius: 99,
+                    }}
+                  >
+                    {badgeCopied ? '✅ Badge Link Copied!' : '📲 Share Badge Card'}
+                  </button>
+                </div>
+              </div>
+
               {/* Saved Places Summary right at the top after Magic Link sign-in */}
               <div className="glass" style={{ padding: '1.75rem', borderRadius: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>

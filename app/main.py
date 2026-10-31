@@ -62,6 +62,8 @@ async def search_venues(
     lat: float = None,
     lng: float = None,
     zip_code: str = "",
+    city: str = "",
+    user_id: str = "",
 ):
     """
     Live Multi-Source Discovery Search Endpoint.
@@ -73,7 +75,7 @@ async def search_venues(
 
     search_lat = lat
     search_lng = lng
-    city_name = ""
+    city_name = city.strip() if city else ""
 
     if zip_code and zip_code.strip():
         g_lat, g_lon, g_city, _ = geocode_zip(zip_code.strip())
@@ -92,7 +94,7 @@ async def search_venues(
         ip_lat, ip_lon, ip_city = geocode_client_ip(forwarded_for)
         if ip_lat is not None and ip_lon is not None:
             search_lat, search_lng = ip_lat, ip_lon
-            city_name = ip_city or ""
+            city_name = ip_city or city_name
         else:
             search_lat = 39.8283
             search_lng = -98.5795
@@ -104,7 +106,7 @@ async def search_venues(
         lon=search_lng,
     )
 
-    # Log event to Supabase analytics (non-blocking, anonymous)
+    # Log event to Supabase analytics (non-blocking, with optional signed-in user_id attribution)
     from app.services.supabase_service import log_search_event
     log_search_event(
         drink=drink,
@@ -114,6 +116,7 @@ async def search_venues(
         latitude=search_lat,
         longitude=search_lng,
         result_count=len(venues),
+        user_id=user_id.strip() if user_id and user_id.strip() else None,
     )
 
     return {

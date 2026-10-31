@@ -53,3 +53,44 @@ def log_search_event(
         # Non-fatal – we never want analytics to break discovery
         print(f"[Supabase] Failed to log search event: {e}")
 
+
+def log_venue_click(
+    venue_name: str,
+    action_type: str,
+    venue_address: str = "",
+    venue_type: str = "",
+    searched_drink: str = "",
+    searched_ingredient: str = "",
+    city: str = "",
+    zip_code: str = "",
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    user_id: Optional[str] = None,
+    device_type: str = "",
+) -> None:
+    """
+    Logs a high-intent venue interaction (Call, Instagram, Website/Menu, Bookmark, or Viral Share)
+    to public.venue_clicks in Supabase.
+    """
+    try:
+        client = get_supabase()
+        payload: dict = {
+            "venue_name": venue_name,
+            "action_type": action_type,
+            "venue_address": venue_address or None,
+            "venue_type": venue_type or None,
+            "searched_drink": searched_drink or None,
+            "searched_ingredient": searched_ingredient or None,
+            "city": city or None,
+            "zip_code": zip_code or None,
+            "latitude": latitude,
+            "longitude": longitude,
+            "user_id": user_id or None,
+            "device_type": device_type or None,
+        }
+        payload = {k: v for k, v in payload.items() if v is not None}
+        client.table("venue_clicks").insert(payload).execute()
+    except Exception as e:
+        print(f"[Supabase] Failed to log venue click: {e}")
+
+
