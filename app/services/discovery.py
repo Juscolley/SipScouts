@@ -15,8 +15,12 @@ _COORD_LOCKS: Dict[Tuple[float, float], threading.Lock] = {}
 
 OVERPASS_ENDPOINTS = (
     "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
 )
+
+OVERPASS_HEADERS = {
+    "User-Agent": "SipScouts/1.0 (https://sipscouts.com; hello@sipscouts.com)",
+    "Accept": "application/json",
+}
 
 
 def _get_coord_lock(key: Tuple[float, float]) -> threading.Lock:
@@ -60,22 +64,28 @@ def discover_cafes(lat: float, lon: float, radius_km: float = 10.0) -> List[Dict
             if now - ts < _CACHE_TTL_SECONDS and cached_list is not None:
                 return cached_list
 
-        radius_meters = int(min(max(radius_km, 10.0), 12.0) * 1000)
-
+        # Use a fast spatial bounding box (~6km around lat/lon) + strict 2.8s timeout so Overpass queues never stall searches
+        delta = 0.055
+        south, west, north, east = lat - delta, lon - delta, lat + delta, lon + delta
         query = f"""
-        [out:json][timeout:6];
+        [out:json][timeout:3][bbox:{south:.4f},{west:.4f},{north:.4f},{east:.4f}];
         (
-          node["amenity"~"^(cafe|bar|pub)$"](around:{radius_meters},{lat},{lon});
-          way["amenity"~"^(cafe|bar|pub)$"](around:{radius_meters},{lat},{lon});
-          node["shop"~"^(tea|coffee)$"](around:{radius_meters},{lat},{lon});
-          way["shop"~"^(tea|coffee)$"](around:{radius_meters},{lat},{lon});
+          node["amenity"="cafe"];
+          node["amenity"="bar"];
+          node["shop"="tea"];
+          node["shop"="coffee"];
         );
-        out center 80;
+        out 70;
         """
 
         for endpoint in OVERPASS_ENDPOINTS:
             try:
-                response = requests.post(endpoint, data={"data": query}, timeout=6.5)
+                response = requests.post(
+                    endpoint,
+                    data={"data": query},
+                    headers=OVERPASS_HEADERS,
+                    timeout=(2.0, 2.8),
+                )
                 if response.status_code != 200:
                     continue
                 data = response.json()
@@ -136,6 +146,8 @@ def discover_cafes(lat: float, lon: float, radius_km: float = 10.0) -> List[Dict
             except Exception as e:
                 logger.warning(f"Overpass endpoint {endpoint} note: {e}")
 
+        # Cache empty result briefly so concurrent threads do not re-query Overpass sequentially on failure
+        _OVERPASS_CACHE[cache_key] = (time.time(), [])
         return []
 
 

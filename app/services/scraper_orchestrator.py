@@ -18,8 +18,8 @@ from app.services import (
 
 logger = logging.getLogger(__name__)
 
-# 10-12 second parallel window (safely under the 15s total UX ceiling)
-PARALLEL_SCRAPER_TIMEOUT_SECONDS = 11.5
+# Fast 5.0-second parallel window (Google Places & Yelp finish in ~1.2s; late scrapers save in background)
+PARALLEL_SCRAPER_TIMEOUT_SECONDS = 5.0
 
 # Fast in-memory search result cache: (query_lower, lat_rounded, lon_rounded) -> (timestamp, venues)
 _SEARCH_CACHE: Dict[Tuple[str, float, float], Tuple[float, List[Dict]]] = {}
