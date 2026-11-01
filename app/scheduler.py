@@ -137,8 +137,20 @@ def daily_dispatch_job(timezone_str: str):
         db.close()
 
 
+def keep_render_warm_job():
+    """Sends a lightweight external GET request to the public Render health endpoint every 10 minutes to prevent idle spin-down."""
+    import requests
+    try:
+        requests.get("https://sipscouts.onrender.com/api/ping", timeout=8)
+    except Exception:
+        pass
+
+
 def setup_scheduler(app):
     scheduler = BackgroundScheduler()
+    
+    # 0. Keep-warm heartbeat every 10 minutes so Render free tier stays warm and responsive
+    scheduler.add_job(keep_render_warm_job, 'interval', minutes=10)
     
     # 1. Background scraping job - runs every 6 hours
     scheduler.add_job(update_cafe_data_background, 'interval', hours=6)
