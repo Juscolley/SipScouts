@@ -49,7 +49,7 @@ def _run_sync_instagram_tiktok_search(keywords: str, lat: float, lon: float) -> 
     if not keywords.strip():
         return []
 
-    local_spots = discover_cafes(lat, lon, radius_km=8.0)
+    local_spots = discover_cafes(lat, lon, radius_km=10.0)
     if not local_spots:
         return []
 

@@ -106,8 +106,23 @@ export default function DiscoverPage() {
         }
       }
 
-      const res = await fetch(`/api/search?${params.toString()}`)
-      const data = await res.json()
+      let data: { venues?: Venue[]; center?: { lat?: number; lng?: number } } = {}
+      let attempt = 0
+      while (attempt < 3) {
+        try {
+          const res = await fetch(`/api/search?${params.toString()}`)
+          if (res.ok) {
+            data = await res.json()
+            break
+          }
+        } catch {
+          // If Render backend was waking from sleep, wait briefly and retry automatically
+        }
+        attempt += 1
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      }
       let results: Venue[] = data.venues ?? []
       const refLat: number | null = data.center?.lat ?? activeLat
       const refLng: number | null = data.center?.lng ?? activeLng
@@ -141,6 +156,16 @@ export default function DiscoverPage() {
       setLoading(false)
     }
   }
+
+  // Pre-warm the Render backend the instant the page opens (and keep it warm while the tab is open)
+  useEffect(() => {
+    const warmBackend = () => {
+      fetch('/api/ping', { cache: 'no-store' }).catch(() => {})
+    }
+    warmBackend()
+    const keepWarmInterval = setInterval(warmBackend, 9 * 60 * 1000)
+    return () => clearInterval(keepWarmInterval)
+  }, [])
 
   // Restore last search from sessionStorage OR execute 1-Tap Quick Scout from /profile URL params
   useEffect(() => {
