@@ -52,6 +52,7 @@ export default function MerchantDashboard() {
   const [igDrink, setIgDrink] = useState('Specialty Coffee & Espresso')
   const [igCity, setIgCity] = useState('Norfolk, VA')
   const [igHandle, setIgHandle] = useState('cafestellaroasters')
+  const [igTheme, setIgTheme] = useState<'terracotta' | 'matcha' | 'espresso' | 'neon'>('terracotta')
   const [igCaptionCopied, setIgCaptionCopied] = useState(false)
   const [igWebhookCopied, setIgWebhookCopied] = useState(false)
 
@@ -364,6 +365,7 @@ export default function MerchantDashboard() {
                 const previewParams = new URLSearchParams({
                   mode: igMode,
                   format: igFormat,
+                  theme: igTheme,
                   venue: activeVenue,
                   drink: activeDrink,
                   city: activeCity,
@@ -472,6 +474,37 @@ export default function MerchantDashboard() {
                           >
                             {igFormat === 'story' ? '📱 9:16 Story' : '🟦 1:1 Feed Post'}
                           </button>
+                        </div>
+
+                        {/* Theme Picker (Terracotta, Matcha, Espresso, Neon Sunset) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                            🎨 Theme:
+                          </span>
+                          {[
+                            { key: 'terracotta', label: '🏺 Terracotta' },
+                            { key: 'matcha', label: '🍵 Matcha Green' },
+                            { key: 'espresso', label: '☕ Dark Roast' },
+                            { key: 'neon', label: '🍸 Speakeasy Sunset' },
+                          ].map(t => (
+                            <button
+                              key={t.key}
+                              type="button"
+                              onClick={() => setIgTheme(t.key as any)}
+                              style={{
+                                padding: '0.28rem 0.65rem',
+                                borderRadius: 8,
+                                border: igTheme === t.key ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                background: igTheme === t.key ? 'var(--primary)' : '#ffffff',
+                                color: igTheme === t.key ? '#ffffff' : 'var(--text-main)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
