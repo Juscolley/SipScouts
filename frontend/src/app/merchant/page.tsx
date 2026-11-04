@@ -48,10 +48,10 @@ export default function MerchantDashboard() {
   const [locationFilter, setLocationFilter] = useState('')
   const [igMode, setIgMode] = useState<'venue' | 'trend'>('venue')
   const [igFormat, setIgFormat] = useState<'story' | 'square'>('story')
-  const [igVenue, setIgVenue] = useState('')
-  const [igDrink, setIgDrink] = useState('')
-  const [igCity, setIgCity] = useState('')
-  const [igHandle, setIgHandle] = useState('')
+  const [igVenue, setIgVenue] = useState('Cafe Stella')
+  const [igDrink, setIgDrink] = useState('Specialty Coffee & Espresso')
+  const [igCity, setIgCity] = useState('Norfolk, VA')
+  const [igHandle, setIgHandle] = useState('cafestellaroasters')
   const [igCaptionCopied, setIgCaptionCopied] = useState(false)
   const [igWebhookCopied, setIgWebhookCopied] = useState(false)
 
@@ -355,27 +355,11 @@ export default function MerchantDashboard() {
 
               {/* 0. @SIPSCOUTSAPP INSTAGRAM CONTENT & AUTOMATION STUDIO */}
               {(() => {
-                const defaultLead = venueLeads.find(v => !v.venue_name.includes('Scout Badge'))
-                const defaultUnmet = unmetOpportunities[0]
-                const activeVenue = igVenue.trim() || defaultLead?.venue_name || 'Local Hidden Gem Café'
-                const activeDrink =
-                  igDrink.trim() ||
-                  (igMode === 'trend'
-                    ? defaultUnmet?.craving
-                    : defaultLead?.topCraving !== 'General Discovery'
-                    ? defaultLead?.topCraving
-                    : '') ||
-                  (topDrink !== '—' ? topDrink : 'Pistachio Matcha Latte')
-                const activeCity =
-                  igCity.trim() ||
-                  (igMode === 'trend' ? defaultUnmet?.location : defaultLead?.location) ||
-                  locationFilter.trim() ||
-                  'Your Neighborhood'
                 const cleanHandle = igHandle.replace(/^@/, '').trim()
-                const activeSignal =
-                  defaultUnmet && defaultUnmet.avgResults <= 6
-                    ? `High Supply Gap (${defaultUnmet.avgResults} local spots)`
-                    : 'Top Local Craving Demand'
+                const activeVenue = igVenue.trim() || 'Local Hidden Gem'
+                const activeDrink = igDrink.trim() || 'Specialty Coffee & Espresso'
+                const activeCity = igCity.trim() || 'Your Neighborhood'
+                const activeSignal = 'Top Local Craving Demand'
 
                 const previewParams = new URLSearchParams({
                   mode: igMode,
