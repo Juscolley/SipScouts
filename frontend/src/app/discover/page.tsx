@@ -1044,16 +1044,30 @@ export default function DiscoverPage() {
                     )}
 
                     {v.tags.filter(t => t !== 'Exact Match' && t !== 'Potential Match').length > 0 && (
-                      <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      <div style={{ marginTop: '0.55rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                         {v.tags
                           .filter(t => t !== 'Exact Match' && t !== 'Potential Match')
                           .map(tag => (
-                            <span key={tag} className="tag tag-ghost">{tag}</span>
+                            <span
+                              key={tag}
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                                padding: '0.14rem 0.48rem',
+                                borderRadius: 5,
+                                background: 'rgba(74, 46, 32, 0.06)',
+                                color: 'var(--text-light)',
+                                fontFamily: 'Inter, sans-serif',
+                                cursor: 'default',
+                              }}
+                            >
+                              {tag}
+                            </span>
                           ))}
                       </div>
                     )}
 
-                    {/* Spacious, Uncrowded 2-Button Action Footer (40px+ Touch Targets) */}
+                    {/* Spacious, Uncrowded 2-Button Action Footer (Unified Raised Tactile Style) */}
                     <div
                       style={{
                         marginTop: '0.85rem',
@@ -1071,18 +1085,19 @@ export default function DiscoverPage() {
                           flex: 1,
                           minBlockSize: 40,
                           padding: '0.48rem 0.7rem',
-                          borderRadius: 12,
-                          border: '1.5px solid rgba(226, 114, 91, 0.45)',
-                          background: copiedVenueId === v.id ? 'var(--primary)' : 'rgba(226, 114, 91, 0.12)',
-                          color: copiedVenueId === v.id ? '#fff' : 'var(--primary)',
+                          borderRadius: 10,
+                          border: '1.5px solid var(--primary)',
+                          background: copiedVenueId === v.id ? 'var(--primary)' : '#ffffff',
+                          color: copiedVenueId === v.id ? '#ffffff' : 'var(--primary)',
+                          boxShadow: '0 2px 6px rgba(226, 114, 91, 0.15)',
                           fontFamily: 'Inter, sans-serif',
-                          fontSize: '0.8rem',
+                          fontSize: '0.79rem',
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.18s ease',
                         }}
                       >
-                        {copiedVenueId === v.id ? '✅ Invite Link Copied!' : '🥂 Invite Friend'}
+                        {copiedVenueId === v.id ? '✅ Invite Link Copied!' : '🥂 Invite Friend ↗'}
                       </button>
 
                       <button
@@ -1109,18 +1124,19 @@ export default function DiscoverPage() {
                           flex: 1,
                           minBlockSize: 40,
                           padding: '0.48rem 0.7rem',
-                          borderRadius: 12,
-                          border: '1px solid rgba(74, 46, 32, 0.22)',
-                          background: 'rgba(74, 46, 32, 0.08)',
+                          borderRadius: 10,
+                          border: '1.5px solid rgba(74, 46, 32, 0.25)',
+                          background: '#ffffff',
                           color: 'var(--text-main)',
+                          boxShadow: '0 2px 6px rgba(74, 46, 32, 0.09)',
                           fontFamily: 'Inter, sans-serif',
-                          fontSize: '0.8rem',
+                          fontSize: '0.79rem',
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.18s ease',
                         }}
                       >
-                        📸 IG Story Card
+                        📸 IG Story Card ↗
                       </button>
                     </div>
                   </div>
