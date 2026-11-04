@@ -362,10 +362,17 @@ export default function ProfilePage() {
             <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
             <span>SipScouts</span>
           </a>
-          <nav className="nav-links">
+          <nav className="nav-links" aria-label="Primary">
             <a href="/discover">Discover</a>
             <a href="/bookmarks">Saved</a>
             <span className="active">Profile</span>
+            <a
+              href="https://www.instagram.com/sipscoutsapp/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              📸 @SipScoutsApp
+            </a>
             {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
           </nav>
         </div>

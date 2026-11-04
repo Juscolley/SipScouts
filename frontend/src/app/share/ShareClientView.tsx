@@ -196,6 +196,22 @@ export default function ShareClientView({
             >
               🔍 Or jump straight to live drink search →
             </a>
+
+            <a
+              href="https://www.instagram.com/sipscoutsapp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: 'var(--primary)',
+                textDecoration: 'none',
+                marginTop: '0.2rem',
+              }}
+            >
+              📸 Follow @SipScoutsApp on Instagram →
+            </a>
           </div>
         </div>
       </div>

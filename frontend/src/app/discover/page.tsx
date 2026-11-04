@@ -36,6 +36,28 @@ interface MemberProfileSummary {
 
 const SEARCH_STORAGE_KEY = 'sipscouts_last_search_v1'
 
+const TRENDING_CRAVINGS: Array<{ label: string; drink: string; ingredient: string }> = [
+  { label: '🍵 Pistachio Matcha', drink: 'Matcha Latte', ingredient: 'Pistachio' },
+  { label: '🍸 Espresso Martini', drink: 'Espresso Martini', ingredient: '' },
+  { label: '☕ Cardamom Latte', drink: 'Latte', ingredient: 'Cardamom' },
+  { label: '🍋 Yuzu Spritz', drink: 'Spritz', ingredient: 'Yuzu' },
+  { label: '🥃 Mezcal Negroni', drink: 'Negroni', ingredient: 'Mezcal' },
+  { label: '🫖 Hojicha Latte', drink: 'Hojicha Latte', ingredient: '' },
+]
+
+function extractIgHandle(url?: string | null): string {
+  if (!url) return ''
+  try {
+    const cleaned = url.replace(/\/+$/, '')
+    const parts = cleaned.split('/')
+    const last = parts[parts.length - 1] || ''
+    if (!last || last.startsWith('?') || last.includes('instagram.com')) return ''
+    return last.replace(/^@/, '')
+  } catch {
+    return ''
+  }
+}
+
 export default function DiscoverPage() {
   const [drink, setDrink] = useState('')
   const [ingredient, setIngredient] = useState('')
@@ -47,6 +69,10 @@ export default function DiscoverPage() {
   const [statusIndex, setStatusIndex] = useState(0)
   const [profilePromptVenue, setProfilePromptVenue] = useState<string | null>(null)
   const [memberProfile, setMemberProfile] = useState<MemberProfileSummary | null>(null)
+  const [copiedVenueId, setCopiedVenueId] = useState<string | null>(null)
+  const [deepLinkCopied, setDeepLinkCopied] = useState(false)
+  const [storyModalVenue, setStoryModalVenue] = useState<Venue | null>(null)
+  const [storyCaptionCopied, setStoryCaptionCopied] = useState(false)
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn, userId, isAdmin } = useBookmarks()
@@ -305,6 +331,85 @@ export default function DiscoverPage() {
     })
   }
 
+  async function handleInviteFriendToVenue(v: Venue) {
+    const activeCraving = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'a great sip'
+    const scoutName = memberProfile?.name?.trim() || 'Your Friend'
+    const cityVal = locationInput.trim() || geo.cityLabel || ''
+
+    trackVenueAction({
+      venue_name: v.name,
+      venue_address: v.address,
+      venue_type: v.type,
+      action_type: 'share_venue',
+      searched_drink: drink.trim(),
+      searched_ingredient: ingredient.trim(),
+      city: cityVal,
+      zip_code: locationInput.trim(),
+      latitude: v.lat,
+      longitude: v.lng,
+      user_id: userId,
+    })
+
+    const shareParams = new URLSearchParams()
+    shareParams.set('venue', v.name)
+    shareParams.set('address', v.address)
+    shareParams.set('drink', activeCraving)
+    shareParams.set('scout', scoutName)
+    if (cityVal) shareParams.set('city', cityVal)
+
+    const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
+    const distLabel = v.distanceKm !== undefined ? ` (${(v.distanceKm * 0.621371).toFixed(1)} mi away)` : ''
+    const shareText = `🥂 Meet me for ${activeCraving} at ${v.name}${distLabel}! Scouted on SipScouts:`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Meet me at ${v.name} · SipScouts`,
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+      setCopiedVenueId(v.id)
+      setTimeout(() => setCopiedVenueId(null), 3000)
+    } catch {
+      // Ignore
+    }
+  }
+
+  async function handleShareDeepLink() {
+    const params = new URLSearchParams()
+    if (drink.trim()) params.set('drink', drink.trim())
+    if (ingredient.trim()) params.set('ingredient', ingredient.trim())
+    const loc = locationInput.trim() || geo.cityLabel || ''
+    if (loc) params.set('zip', loc)
+    params.set('autosearch', '1')
+    const url = `${window.location.origin}/discover?${params.toString()}`
+    const text = `🗺️ Live SipScouts map for "${queryLabel}"${loc ? ` near ${loc}` : ''}:`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `SipScouts Map: ${queryLabel}`, text, url })
+        return
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`)
+      setDeepLinkCopied(true)
+      setTimeout(() => setDeepLinkCopied(false), 3000)
+    } catch {
+      // Ignore
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
       {/* Fixed hero background */}
@@ -318,10 +423,18 @@ export default function DiscoverPage() {
             <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
             <span>SipScouts</span>
           </a>
-          <nav className="nav-links">
+          <nav className="nav-links" aria-label="Primary">
             <span className="active">Discover</span>
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
+            <a
+              href="https://www.instagram.com/sipscoutsapp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Follow @SipScoutsApp on Instagram"
+            >
+              📸 @SipScoutsApp
+            </a>
             {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
             {isLoggedIn ? (
               <a href="/profile" className="nav-btn">My Profile ✓</a>
@@ -425,7 +538,7 @@ export default function DiscoverPage() {
           style={{
             maxWidth: 720,
             margin: '0 auto',
-            padding: '0 1.5rem 1rem',
+            padding: '0 1.5rem 0.85rem',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -435,6 +548,55 @@ export default function DiscoverPage() {
         >
           <InstallAppButton />
           <NotificationBell />
+        </div>
+
+        {/* 1-Tap Trending Cravings Bar (Converts IG Bio Traffic into Immediate Logged Searches) */}
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.15rem', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'rgba(255, 240, 228, 0.92)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.45)',
+                marginRight: '0.2rem',
+              }}
+            >
+              🔥 1-Tap Trending:
+            </span>
+            {TRENDING_CRAVINGS.map(item => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() =>
+                  executeSearch({
+                    drinkVal: item.drink,
+                    ingredientVal: item.ingredient,
+                    locationVal: locationInput.trim() || memberProfile?.zip_code?.trim() || '',
+                  })
+                }
+                style={{
+                  minBlockSize: 34,
+                  padding: '0.32rem 0.8rem',
+                  borderRadius: 99,
+                  border: '1px solid rgba(255, 203, 164, 0.55)',
+                  background: 'rgba(42, 24, 16, 0.72)',
+                  backdropFilter: 'blur(6px)',
+                  color: '#FAF3E8',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Returning Signed-In Member 1-Tap Favorites Bar */}
@@ -751,11 +913,119 @@ export default function DiscoverPage() {
                           ))}
                       </div>
                     )}
+
+                    {/* Spacious, Uncrowded 2-Button Action Footer (40px+ Touch Targets) */}
+                    <div
+                      style={{
+                        marginTop: '0.85rem',
+                        paddingTop: '0.75rem',
+                        borderTop: '1px solid rgba(74, 46, 32, 0.12)',
+                        display: 'flex',
+                        gap: '0.55rem',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleInviteFriendToVenue(v)}
+                        aria-label={`Invite Friend to ${v.name}`}
+                        style={{
+                          flex: 1,
+                          minBlockSize: 40,
+                          padding: '0.48rem 0.7rem',
+                          borderRadius: 12,
+                          border: '1.5px solid rgba(226, 114, 91, 0.45)',
+                          background: copiedVenueId === v.id ? 'var(--primary)' : 'rgba(226, 114, 91, 0.12)',
+                          color: copiedVenueId === v.id ? '#fff' : 'var(--primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        {copiedVenueId === v.id ? '✅ Invite Link Copied!' : '🥂 Invite Friend'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          trackVenueAction({
+                            venue_name: v.name,
+                            venue_address: v.address,
+                            venue_type: v.type,
+                            action_type: 'share_venue',
+                            searched_drink: drink.trim(),
+                            searched_ingredient: ingredient.trim(),
+                            city: geo.cityLabel || locationInput.trim(),
+                            zip_code: locationInput.trim(),
+                            latitude: v.lat,
+                            longitude: v.lng,
+                            user_id: userId,
+                          })
+                          setStoryCaptionCopied(false)
+                          setStoryModalVenue(v)
+                        }}
+                        aria-label={`IG Story Card for ${v.name}`}
+                        style={{
+                          flex: 1,
+                          minBlockSize: 40,
+                          padding: '0.48rem 0.7rem',
+                          borderRadius: 12,
+                          border: '1px solid rgba(74, 46, 32, 0.22)',
+                          background: 'rgba(74, 46, 32, 0.08)',
+                          color: 'var(--text-main)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease',
+                        }}
+                      >
+                        📸 IG Story Card
+                      </button>
+                    </div>
                   </div>
                 )
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* Share Live Search Map Bar */}
+                    <div
+                      className="glass"
+                      style={{
+                        padding: '0.75rem 1.15rem',
+                        borderRadius: 16,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '0.6rem',
+                        background: 'rgba(255, 255, 255, 0.92)',
+                      }}
+                    >
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.84rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                        🗺️ Found <strong>{venues.length} local spots</strong> for <strong>&ldquo;{queryLabel}&rdquo;</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleShareDeepLink}
+                        style={{
+                          minBlockSize: 36,
+                          padding: '0.4rem 0.95rem',
+                          borderRadius: 99,
+                          border: '1.5px solid var(--primary)',
+                          background: deepLinkCopied ? 'var(--primary)' : 'rgba(226, 114, 91, 0.12)',
+                          color: deepLinkCopied ? '#fff' : 'var(--primary)',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {deepLinkCopied ? '✅ Map Link Copied!' : '🔗 Share This Search Map'}
+                      </button>
+                    </div>
+
                     {exactMatches.length > 0 && (
                       <div>
                         <div className="glass" style={{ padding: '0.9rem 1.25rem', borderRadius: 16, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -862,6 +1132,165 @@ export default function DiscoverPage() {
           </div>
         </div>
       )}
+
+      {/* Modal shown when a user taps "📸 IG Story Card" on any venue card */}
+      {storyModalVenue && (() => {
+        const activeCraving = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'Specialty Coffee, Matcha & Cocktails'
+        const cityVal = locationInput.trim() || geo.cityLabel || 'Local Gem'
+        const venueIgHandle = extractIgHandle(storyModalVenue.instagram_url)
+        const distVal = storyModalVenue.distanceKm !== undefined ? `${(storyModalVenue.distanceKm * 0.621371).toFixed(1)} mi away` : ''
+        const scoutName = memberProfile?.name?.trim() || 'SipScouts'
+
+        const storyParams = new URLSearchParams({
+          mode: 'venue',
+          format: 'story',
+          venue: storyModalVenue.name,
+          drink: activeCraving,
+          city: cityVal,
+          scout: scoutName,
+          ...(venueIgHandle ? { handle: venueIgHandle } : {}),
+          ...(distVal ? { dist: distVal } : {}),
+        })
+        const storyImageUrl = `/og/instagram?${storyParams.toString()}`
+        const captionText = `🎯 Just scouted ${activeCraving} at ${storyModalVenue.name}${venueIgHandle ? ` (@${venueIgHandle})` : ''} on @SipScoutsApp! ☕🍸 Search any drink or ingredient near you at sipscouts.com #SipScouts`
+
+        return (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ig-story-modal-title"
+            onClick={() => setStoryModalVenue(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              background: 'rgba(28, 12, 6, 0.72)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              className="glass"
+              style={{
+                maxWidth: 420,
+                width: '100%',
+                padding: '1.35rem',
+                background: '#fcf6f0',
+                borderRadius: 24,
+                color: 'var(--text-main)',
+                textAlign: 'center',
+              }}
+            >
+              <h3 id="ig-story-modal-title" style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', margin: '0 0 0.35rem' }}>
+                📸 Ready-to-Post IG Story Card
+              </h3>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', margin: '0 0 0.85rem', lineHeight: 1.45 }}>
+                Tag <strong>{venueIgHandle ? `@${venueIgHandle} + ` : ''}@SipScoutsApp</strong> in your Story so the venue can repost you!
+              </p>
+
+              <div
+                style={{
+                  width: '100%',
+                  maxWidth: 230,
+                  margin: '0 auto 0.9rem',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  border: '2px solid var(--primary)',
+                  boxShadow: '0 8px 24px rgba(74, 46, 32, 0.2)',
+                  background: '#24130C',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={storyImageUrl}
+                  alt={`Instagram Story card for ${storyModalVenue.name}`}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+              </div>
+
+              <div
+                style={{
+                  background: 'rgba(74, 46, 32, 0.06)',
+                  border: '1px solid rgba(74, 46, 32, 0.16)',
+                  borderRadius: 12,
+                  padding: '0.6rem 0.75rem',
+                  fontSize: '0.78rem',
+                  fontFamily: 'Inter, sans-serif',
+                  color: 'var(--text-main)',
+                  textAlign: 'left',
+                  marginBottom: '0.85rem',
+                  lineHeight: 1.45,
+                }}
+              >
+                {captionText}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                <a
+                  href={storyImageUrl}
+                  download={`sipscouts-story-${storyModalVenue.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="warm-btn"
+                  style={{
+                    width: '100%',
+                    minBlockSize: 42,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.65rem 1rem',
+                    fontSize: '0.88rem',
+                  }}
+                >
+                  📥 Save / Open 9:16 Story Image
+                </a>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(captionText)
+                      setStoryCaptionCopied(true)
+                      setTimeout(() => setStoryCaptionCopied(false), 3000)
+                    } catch {
+                      // Ignore
+                    }
+                  }}
+                  className="warm-btn-ghost"
+                  style={{
+                    width: '100%',
+                    minBlockSize: 40,
+                    padding: '0.6rem 1rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    border: '1.5px solid var(--primary)',
+                    color: 'var(--primary)',
+                    background: 'rgba(255,255,255,0.92)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {storyCaptionCopied ? '✅ Caption & @Tags Copied!' : `📋 Copy @Tags (${venueIgHandle ? `@${venueIgHandle} + ` : ''}@SipScoutsApp)`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStoryModalVenue(null)}
+                  className="warm-btn-ghost"
+                  style={{ width: '100%', minBlockSize: 38, padding: '0.5rem 1rem', cursor: 'pointer', border: 'none' }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -108,7 +108,7 @@ export async function GET(request: Request) {
           }}
         >
           <span style={{ fontSize: '22px', color: '#FFCBA4', fontWeight: 600 }}>
-            sipscouts.com — Find Your Next Perfect Sip
+            sipscouts.com · IG @SipScoutsApp
           </span>
           <div
             style={{

@@ -46,6 +46,14 @@ export default function MerchantDashboard() {
   const [loading, setLoading] = useState(true)
   const [isAuthorizedCreator, setIsAuthorizedCreator] = useState(false)
   const [locationFilter, setLocationFilter] = useState('')
+  const [igMode, setIgMode] = useState<'venue' | 'trend'>('venue')
+  const [igFormat, setIgFormat] = useState<'story' | 'square'>('story')
+  const [igVenue, setIgVenue] = useState('')
+  const [igDrink, setIgDrink] = useState('')
+  const [igCity, setIgCity] = useState('')
+  const [igHandle, setIgHandle] = useState('')
+  const [igCaptionCopied, setIgCaptionCopied] = useState(false)
+  const [igWebhookCopied, setIgWebhookCopied] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -265,10 +273,17 @@ export default function MerchantDashboard() {
             <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
             <span>SipScouts</span>
           </a>
-          <nav className="nav-links">
+          <nav className="nav-links" aria-label="Primary">
             <a href="/discover">Discover</a>
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
+            <a
+              href="https://www.instagram.com/sipscoutsapp/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              📸 @SipScoutsApp
+            </a>
             <span className="active">Dashboard</span>
             <span className="tag tag-green">Merchant B2B</span>
           </nav>
@@ -337,6 +352,280 @@ export default function MerchantDashboard() {
                   </div>
                 ))}
               </div>
+
+              {/* 0. @SIPSCOUTSAPP INSTAGRAM CONTENT & AUTOMATION STUDIO */}
+              {(() => {
+                const defaultLead = venueLeads.find(v => !v.venue_name.includes('Scout Badge'))
+                const defaultUnmet = unmetOpportunities[0]
+                const activeVenue = igVenue.trim() || defaultLead?.venue_name || 'Local Hidden Gem Café'
+                const activeDrink =
+                  igDrink.trim() ||
+                  (igMode === 'trend'
+                    ? defaultUnmet?.craving
+                    : defaultLead?.topCraving !== 'General Discovery'
+                    ? defaultLead?.topCraving
+                    : '') ||
+                  (topDrink !== '—' ? topDrink : 'Pistachio Matcha Latte')
+                const activeCity =
+                  igCity.trim() ||
+                  (igMode === 'trend' ? defaultUnmet?.location : defaultLead?.location) ||
+                  locationFilter.trim() ||
+                  'Your Neighborhood'
+                const cleanHandle = igHandle.replace(/^@/, '').trim()
+                const activeSignal =
+                  defaultUnmet && defaultUnmet.avgResults <= 6
+                    ? `High Supply Gap (${defaultUnmet.avgResults} local spots)`
+                    : 'Top Local Craving Demand'
+
+                const previewParams = new URLSearchParams({
+                  mode: igMode,
+                  format: igFormat,
+                  venue: activeVenue,
+                  drink: activeDrink,
+                  city: activeCity,
+                  signal: activeSignal,
+                  ...(cleanHandle ? { handle: cleanHandle } : {}),
+                })
+                const previewImageUrl = `/og/instagram?${previewParams.toString()}`
+
+                const autoCaption =
+                  igMode === 'venue'
+                    ? `🎯 Hidden Gem Sip Spotlight: Craving ${activeDrink} near ${activeCity}? Our scouts just surfaced ${activeVenue}${cleanHandle ? ` (@${cleanHandle})` : ''}! ☕🍸\n\nTap the link in @SipScoutsApp bio or visit sipscouts.com to search any drink or ingredient within 55 miles — 100% free, no App Store download needed.\n\n📸 Follow @SipScoutsApp & tag a friend you'd bring here!\n\n#SipScouts #SpecialtyCoffee #MatchaLovers #CraftCocktails #LocalGems`
+                    : `🔥 Neighborhood Craving Report: "${activeDrink}" is trending in ${activeCity} (${activeSignal})!\n\nKnow a local café, tea house, or cocktail bar that crafts an unforgettable ${activeDrink}? Tag their @handle below so our community can scout them!\n\n🔍 Search any drink or ingredient at sipscouts.com (link in @SipScoutsApp bio).\n\n#SipScouts #DrinkDiscovery #CoffeeCulture #Matcha #CraftCocktails`
+
+                return (
+                  <div className="glass" style={{ borderRadius: 20, padding: '1.35rem 1.5rem', border: '1.5px solid rgba(226, 114, 91, 0.45)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.1rem' }}>
+                      <div>
+                        <h2 className="section-title" style={{ margin: 0, color: 'var(--primary)' }}>
+                          📸 @SipScoutsApp Instagram Auto-Content &amp; Growth Studio
+                        </h2>
+                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.2rem' }}>
+                          Auto-generates ready-to-post 9:16 Story &amp; 1:1 Feed graphics + viral captions from your live B2B data (or connect the free webhook for 100% hands-free daily posting).
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <a
+                          href="https://www.instagram.com/sipscoutsapp/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="warm-btn-ghost"
+                          style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderRadius: 99, textDecoration: 'none', fontWeight: 700 }}
+                        >
+                          ↗ Open @SipScoutsApp IG
+                        </a>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(`${window.location.origin}/api/ig-autopost`)
+                              setIgWebhookCopied(true)
+                              setTimeout(() => setIgWebhookCopied(false), 3000)
+                            } catch {
+                              // Ignore
+                            }
+                          }}
+                          className="warm-btn-ghost"
+                          style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', borderRadius: 99, fontWeight: 700, cursor: 'pointer', color: 'var(--primary)' }}
+                        >
+                          {igWebhookCopied ? '✅ Auto-Post JSON Feed Copied!' : '⚡ Copy Auto-Post Webhook (/api/ig-autopost)'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
+                      {/* Left Controls */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setIgMode('venue')}
+                            style={{
+                              flex: 1,
+                              minBlockSize: 38,
+                              borderRadius: 10,
+                              border: igMode === 'venue' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                              background: igMode === 'venue' ? 'var(--primary)' : 'rgba(255,255,255,0.85)',
+                              color: igMode === 'venue' ? '#fff' : 'var(--text-main)',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            🎯 Venue Spotlight
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIgMode('trend')}
+                            style={{
+                              flex: 1,
+                              minBlockSize: 38,
+                              borderRadius: 10,
+                              border: igMode === 'trend' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                              background: igMode === 'trend' ? 'var(--primary)' : 'rgba(255,255,255,0.85)',
+                              color: igMode === 'trend' ? '#fff' : 'var(--text-main)',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            🔥 Craving Report
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIgFormat(prev => (prev === 'story' ? 'square' : 'story'))}
+                            style={{
+                              minBlockSize: 38,
+                              padding: '0 0.85rem',
+                              borderRadius: 10,
+                              border: '1px solid var(--border)',
+                              background: 'rgba(74, 46, 32, 0.08)',
+                              color: 'var(--text-main)',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {igFormat === 'story' ? '📱 9:16 Story' : '🟦 1:1 Feed Post'}
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                              Featured Drink / Craving
+                            </label>
+                            <input
+                              className="warm-input"
+                              type="text"
+                              value={igDrink}
+                              onChange={e => setIgDrink(e.target.value)}
+                              placeholder={activeDrink}
+                              style={{ padding: '0.5rem 0.75rem', fontSize: '0.84rem' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                              City / Neighborhood
+                            </label>
+                            <input
+                              className="warm-input"
+                              type="text"
+                              value={igCity}
+                              onChange={e => setIgCity(e.target.value)}
+                              placeholder={activeCity}
+                              style={{ padding: '0.5rem 0.75rem', fontSize: '0.84rem' }}
+                            />
+                          </div>
+                          {igMode === 'venue' && (
+                            <>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                  Spotlight Venue Name
+                                </label>
+                                <input
+                                  className="warm-input"
+                                  type="text"
+                                  value={igVenue}
+                                  onChange={e => setIgVenue(e.target.value)}
+                                  placeholder={activeVenue}
+                                  style={{ padding: '0.5rem 0.75rem', fontSize: '0.84rem' }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                  Venue @Instagram Handle
+                                </label>
+                                <input
+                                  className="warm-input"
+                                  type="text"
+                                  value={igHandle}
+                                  onChange={e => setIgHandle(e.target.value)}
+                                  placeholder="e.g. @localcafe"
+                                  style={{ padding: '0.5rem 0.75rem', fontSize: '0.84rem' }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                            Auto-Written Viral Caption + @Tags
+                          </label>
+                          <textarea
+                            readOnly
+                            value={autoCaption}
+                            rows={5}
+                            className="warm-input"
+                            style={{ width: '100%', fontSize: '0.8rem', lineHeight: 1.45, resize: 'vertical' }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                          <a
+                            href={previewImageUrl}
+                            download={`sipscouts-${igMode}-${igFormat}.png`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="warm-btn"
+                            style={{ flex: 1, minBlockSize: 40, textAlign: 'center', textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.84rem' }}
+                          >
+                            📥 Download {igFormat === 'story' ? '9:16 Story' : '1:1 Square'} PNG
+                          </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(autoCaption)
+                                setIgCaptionCopied(true)
+                                setTimeout(() => setIgCaptionCopied(false), 3000)
+                              } catch {
+                                // Ignore
+                              }
+                            }}
+                            className="warm-btn-ghost"
+                            style={{
+                              flex: 1,
+                              minBlockSize: 40,
+                              padding: '0.6rem 1rem',
+                              fontSize: '0.84rem',
+                              fontWeight: 700,
+                              border: '1.5px solid var(--primary)',
+                              color: 'var(--primary)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {igCaptionCopied ? '✅ Caption Copied!' : '📋 Copy Caption & @Tags'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Live Graphic Preview */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div
+                          style={{
+                            width: '100%',
+                            maxWidth: igFormat === 'story' ? 220 : 300,
+                            borderRadius: 16,
+                            overflow: 'hidden',
+                            border: '2px solid var(--primary)',
+                            boxShadow: '0 8px 26px rgba(74, 46, 32, 0.18)',
+                            background: '#24130C',
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewImageUrl}
+                            alt="SipScouts Instagram graphic preview"
+                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* 1. UNMET CRAVING / SUPPLY GAP REPORT */}
               <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
