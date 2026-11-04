@@ -52,7 +52,7 @@ export default function MerchantDashboard() {
   const [igDrink, setIgDrink] = useState('Specialty Coffee & Espresso')
   const [igCity, setIgCity] = useState('Norfolk, VA')
   const [igHandle, setIgHandle] = useState('cafestellaroasters')
-  const [igTheme, setIgTheme] = useState<'terracotta' | 'matcha' | 'espresso' | 'neon'>('terracotta')
+  const [igTheme, setIgTheme] = useState<'terracotta' | 'matcha' | 'espresso' | 'neon' | 'starry_hero'>('starry_hero')
   const [igCaptionCopied, setIgCaptionCopied] = useState(false)
   const [igWebhookCopied, setIgWebhookCopied] = useState(false)
 
@@ -476,16 +476,17 @@ export default function MerchantDashboard() {
                           </button>
                         </div>
 
-                        {/* Theme Picker (Terracotta, Matcha, Espresso, Neon Sunset) */}
+                        {/* Theme Picker (Terracotta, Matcha, Espresso, Starry Night Box, Starry Night Hero Mascot) */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                            🎨 Theme:
+                            🎨 Theme / Layout:
                           </span>
                           {[
+                            { key: 'starry_hero', label: '🌌 Giant Mascot (Starry Night - No Box)' },
+                            { key: 'neon', label: '🍸 Boxed Speakeasy (Starry Night)' },
                             { key: 'terracotta', label: '🏺 Terracotta' },
-                            { key: 'matcha', label: '🍵 Matcha Green' },
-                            { key: 'espresso', label: '☕ Dark Roast' },
-                            { key: 'neon', label: '🍸 Speakeasy Sunset' },
+                            { key: 'matcha', label: '🍵 Matcha' },
+                            { key: 'espresso', label: '☕ Espresso' },
                           ].map(t => (
                             <button
                               key={t.key}
