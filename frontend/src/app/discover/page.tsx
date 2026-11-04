@@ -774,7 +774,6 @@ export default function DiscoverPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
-                        <span className="tag" style={{ textTransform: 'capitalize' }}>{v.type}</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -785,124 +784,264 @@ export default function DiscoverPage() {
                             }
                           }}
                           style={{
-                            background: isBookmarked(v.name) ? 'rgba(226,114,91,0.16)' : 'rgba(74,46,32,0.06)',
-                            border: '1px solid var(--border)',
-                            borderRadius: 99,
-                            padding: '0.22rem 0.6rem',
+                            minBlockSize: 34,
+                            background: isBookmarked(v.name) ? 'var(--primary)' : '#ffffff',
+                            border: '1.5px solid var(--primary)',
+                            borderRadius: 10,
+                            padding: '0.3rem 0.72rem',
                             cursor: 'pointer',
                             fontSize: '0.78rem',
                             fontFamily: 'Inter, sans-serif',
-                            fontWeight: 600,
-                            color: isBookmarked(v.name) ? 'var(--primary)' : 'var(--text-main)',
+                            fontWeight: 700,
+                            color: isBookmarked(v.name) ? '#ffffff' : 'var(--primary)',
+                            boxShadow: '0 2px 6px rgba(226, 114, 91, 0.18)',
                             transition: 'all 0.2s',
                           }}
                           title={isBookmarked(v.name) ? 'Remove from Saved' : 'Save this location'}
                         >
-                          {isBookmarked(v.name) ? '🔖 Saved' : '🔖 Save'}
+                          {isBookmarked(v.name) ? '🔖 Saved ✓' : '🔖 Save'}
                         </button>
                       </div>
                     </div>
 
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
 
-                    <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem' }}>
+                    {/* Static Status Badges Row (Flat, Non-Clickable Info Labels) */}
+                    <div
+                      style={{
+                        marginTop: '0.6rem',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.69rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          padding: '0.16rem 0.5rem',
+                          borderRadius: 5,
+                          background: 'rgba(74, 46, 32, 0.07)',
+                          color: 'var(--text-light)',
+                          fontFamily: 'Inter, sans-serif',
+                          cursor: 'default',
+                        }}
+                      >
+                        {v.type === 'bar' ? '🍸 Bar' : '☕ Cafe'}
+                      </span>
+
                       {isPotential ? (
-                        <span className="tag tag-ghost" style={{ fontSize: '0.72rem', padding: '0.18rem 0.55rem', fontWeight: 600 }}>
+                        <span
+                          style={{
+                            fontSize: '0.69rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            padding: '0.16rem 0.5rem',
+                            borderRadius: 5,
+                            background: 'rgba(74, 46, 32, 0.07)',
+                            color: 'var(--text-light)',
+                            fontFamily: 'Inter, sans-serif',
+                            cursor: 'default',
+                          }}
+                        >
                           ✨ Potential Match
                         </span>
                       ) : (
-                        <span className="tag" style={{ fontSize: '0.72rem', padding: '0.18rem 0.55rem', fontWeight: 700 }}>
+                        <span
+                          style={{
+                            fontSize: '0.69rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            padding: '0.16rem 0.5rem',
+                            borderRadius: 5,
+                            background: 'rgba(226, 114, 91, 0.14)',
+                            color: 'var(--primary)',
+                            fontFamily: 'Inter, sans-serif',
+                            cursor: 'default',
+                          }}
+                        >
                           🎯 Exact Match
                         </span>
                       )}
+
                       {v.open_now === true && (
-                        <span className="tag tag-green" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem' }}>
-                          🟢 Open Now
+                        <span
+                          style={{
+                            fontSize: '0.69rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            padding: '0.16rem 0.5rem',
+                            borderRadius: 5,
+                            background: 'rgba(46, 125, 50, 0.12)',
+                            color: '#2e7d32',
+                            fontFamily: 'Inter, sans-serif',
+                            cursor: 'default',
+                          }}
+                        >
+                          ● Open Now
                         </span>
                       )}
                       {v.open_now === false && (
-                        <span className="tag tag-ghost" style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', color: '#a94442' }}>
-                          🔴 Closed
+                        <span
+                          style={{
+                            fontSize: '0.69rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            padding: '0.16rem 0.5rem',
+                            borderRadius: 5,
+                            background: 'rgba(169, 68, 66, 0.1)',
+                            color: '#a94442',
+                            fontFamily: 'Inter, sans-serif',
+                            cursor: 'default',
+                          }}
+                        >
+                          ● Closed
                         </span>
                       )}
-                      {v.phone && (
-                        <a
-                          href={`tel:${v.phone}`}
-                          onClick={() =>
-                            trackVenueAction({
-                              venue_name: v.name,
-                              venue_address: v.address,
-                              venue_type: v.type,
-                              action_type: 'call',
-                              searched_drink: drink.trim(),
-                              searched_ingredient: ingredient.trim(),
-                              city: geo.cityLabel || locationInput.trim(),
-                              zip_code: locationInput.trim(),
-                              latitude: v.lat,
-                              longitude: v.lng,
-                              user_id: userId,
-                            })
-                          }
-                          className="tag tag-ghost"
-                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-main)' }}
-                          title={`Call ${v.phone}`}
-                        >
-                          📞 Call
-                        </a>
-                      )}
-                      {v.instagram_url && (
-                        <a
-                          href={v.instagram_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() =>
-                            trackVenueAction({
-                              venue_name: v.name,
-                              venue_address: v.address,
-                              venue_type: v.type,
-                              action_type: 'instagram',
-                              searched_drink: drink.trim(),
-                              searched_ingredient: ingredient.trim(),
-                              city: geo.cityLabel || locationInput.trim(),
-                              zip_code: locationInput.trim(),
-                              latitude: v.lat,
-                              longitude: v.lng,
-                              user_id: userId,
-                            })
-                          }
-                          className="tag tag-ghost"
-                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--primary)' }}
-                        >
-                          📸 Instagram
-                        </a>
-                      )}
-                      {v.website && (
-                        <a
-                          href={v.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() =>
-                            trackVenueAction({
-                              venue_name: v.name,
-                              venue_address: v.address,
-                              venue_type: v.type,
-                              action_type: 'website',
-                              searched_drink: drink.trim(),
-                              searched_ingredient: ingredient.trim(),
-                              city: geo.cityLabel || locationInput.trim(),
-                              zip_code: locationInput.trim(),
-                              latitude: v.lat,
-                              longitude: v.lng,
-                              user_id: userId,
-                            })
-                          }
-                          className="tag tag-ghost"
-                          style={{ fontSize: '0.74rem', padding: '0.18rem 0.6rem', textDecoration: 'none', fontWeight: 600, color: 'var(--text-light)' }}
-                        >
-                          🌐 Menu / Site
-                        </a>
-                      )}
                     </div>
+
+                    {/* Tactile Clickable Venue Action Buttons Row (Call, Instagram, Menu/Site) */}
+                    {(v.phone || v.instagram_url || v.website) && (
+                      <div
+                        style={{
+                          marginTop: '0.6rem',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                        }}
+                      >
+                        {v.phone && (
+                          <a
+                            href={`tel:${v.phone}`}
+                            onClick={() =>
+                              trackVenueAction({
+                                venue_name: v.name,
+                                venue_address: v.address,
+                                venue_type: v.type,
+                                action_type: 'call',
+                                searched_drink: drink.trim(),
+                                searched_ingredient: ingredient.trim(),
+                                city: geo.cityLabel || locationInput.trim(),
+                                zip_code: locationInput.trim(),
+                                latitude: v.lat,
+                                longitude: v.lng,
+                                user_id: userId,
+                              })
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              minBlockSize: 34,
+                              padding: '0.3rem 0.7rem',
+                              borderRadius: 10,
+                              background: '#ffffff',
+                              border: '1.5px solid rgba(74, 46, 32, 0.25)',
+                              boxShadow: '0 2px 5px rgba(74, 46, 32, 0.08)',
+                              fontSize: '0.76rem',
+                              fontFamily: 'Inter, sans-serif',
+                              fontWeight: 700,
+                              color: 'var(--text-main)',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                            }}
+                            title={`Call ${v.phone}`}
+                          >
+                            📞 Call ↗
+                          </a>
+                        )}
+                        {v.instagram_url && (
+                          <a
+                            href={v.instagram_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() =>
+                              trackVenueAction({
+                                venue_name: v.name,
+                                venue_address: v.address,
+                                venue_type: v.type,
+                                action_type: 'instagram',
+                                searched_drink: drink.trim(),
+                                searched_ingredient: ingredient.trim(),
+                                city: geo.cityLabel || locationInput.trim(),
+                                zip_code: locationInput.trim(),
+                                latitude: v.lat,
+                                longitude: v.lng,
+                                user_id: userId,
+                              })
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              minBlockSize: 34,
+                              padding: '0.3rem 0.7rem',
+                              borderRadius: 10,
+                              background: '#ffffff',
+                              border: '1.5px solid rgba(226, 114, 91, 0.48)',
+                              boxShadow: '0 2px 5px rgba(226, 114, 91, 0.12)',
+                              fontSize: '0.76rem',
+                              fontFamily: 'Inter, sans-serif',
+                              fontWeight: 700,
+                              color: 'var(--primary)',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📸 Instagram ↗
+                          </a>
+                        )}
+                        {v.website && (
+                          <a
+                            href={v.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() =>
+                              trackVenueAction({
+                                venue_name: v.name,
+                                venue_address: v.address,
+                                venue_type: v.type,
+                                action_type: 'website',
+                                searched_drink: drink.trim(),
+                                searched_ingredient: ingredient.trim(),
+                                city: geo.cityLabel || locationInput.trim(),
+                                zip_code: locationInput.trim(),
+                                latitude: v.lat,
+                                longitude: v.lng,
+                                user_id: userId,
+                              })
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              minBlockSize: 34,
+                              padding: '0.3rem 0.7rem',
+                              borderRadius: 10,
+                              background: '#ffffff',
+                              border: '1.5px solid rgba(74, 46, 32, 0.25)',
+                              boxShadow: '0 2px 5px rgba(74, 46, 32, 0.08)',
+                              fontSize: '0.76rem',
+                              fontFamily: 'Inter, sans-serif',
+                              fontWeight: 700,
+                              color: 'var(--text-main)',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            🌐 Menu / Site ↗
+                          </a>
+                        )}
+                      </div>
+                    )}
 
                     {v.tags.filter(t => t !== 'Exact Match' && t !== 'Potential Match').length > 0 && (
                       <div style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
