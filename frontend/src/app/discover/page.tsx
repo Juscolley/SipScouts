@@ -763,7 +763,11 @@ export default function DiscoverPage() {
                 const potentialMatches = venues.filter(v => v.match_tier === 'potential' || v.tags.includes('Potential Match'))
 
                 const renderVenueCard = (v: Venue, isPotential: boolean) => (
-                  <div key={v.id} className="warm-card glass">
+                  <div
+                    key={v.id}
+                    className="warm-card glass"
+                    style={{ background: 'rgba(250, 241, 230, 0.94)' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
                       <div>
                         <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.1rem', color: 'var(--text-main)' }}>{v.name}</h3>
@@ -794,7 +798,7 @@ export default function DiscoverPage() {
                             fontFamily: 'Inter, sans-serif',
                             fontWeight: 700,
                             color: isBookmarked(v.name) ? '#ffffff' : 'var(--primary)',
-                            boxShadow: '0 2px 6px rgba(226, 114, 91, 0.18)',
+                            boxShadow: '0 2px 0 rgba(226, 114, 91, 0.28), 0 4px 10px rgba(74, 46, 32, 0.12)',
                             transition: 'all 0.2s',
                           }}
                           title={isBookmarked(v.name) ? 'Remove from Saved' : 'Save this location'}
@@ -944,8 +948,8 @@ export default function DiscoverPage() {
                               padding: '0.3rem 0.7rem',
                               borderRadius: 10,
                               background: '#ffffff',
-                              border: '1.5px solid rgba(74, 46, 32, 0.25)',
-                              boxShadow: '0 2px 5px rgba(74, 46, 32, 0.08)',
+                              border: '1.5px solid rgba(74, 46, 32, 0.28)',
+                              boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
                               fontSize: '0.76rem',
                               fontFamily: 'Inter, sans-serif',
                               fontWeight: 700,
@@ -986,8 +990,8 @@ export default function DiscoverPage() {
                               padding: '0.3rem 0.7rem',
                               borderRadius: 10,
                               background: '#ffffff',
-                              border: '1.5px solid rgba(226, 114, 91, 0.48)',
-                              boxShadow: '0 2px 5px rgba(226, 114, 91, 0.12)',
+                              border: '1.5px solid var(--primary)',
+                              boxShadow: '0 2px 0 rgba(226, 114, 91, 0.24), 0 4px 10px rgba(226, 114, 91, 0.12)',
                               fontSize: '0.76rem',
                               fontFamily: 'Inter, sans-serif',
                               fontWeight: 700,
@@ -1027,8 +1031,8 @@ export default function DiscoverPage() {
                               padding: '0.3rem 0.7rem',
                               borderRadius: 10,
                               background: '#ffffff',
-                              border: '1.5px solid rgba(74, 46, 32, 0.25)',
-                              boxShadow: '0 2px 5px rgba(74, 46, 32, 0.08)',
+                              border: '1.5px solid rgba(74, 46, 32, 0.28)',
+                              boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
                               fontSize: '0.76rem',
                               fontFamily: 'Inter, sans-serif',
                               fontWeight: 700,
@@ -1089,7 +1093,7 @@ export default function DiscoverPage() {
                           border: '1.5px solid var(--primary)',
                           background: copiedVenueId === v.id ? 'var(--primary)' : '#ffffff',
                           color: copiedVenueId === v.id ? '#ffffff' : 'var(--primary)',
-                          boxShadow: '0 2px 6px rgba(226, 114, 91, 0.15)',
+                          boxShadow: '0 2px 0 rgba(226, 114, 91, 0.26), 0 4px 10px rgba(226, 114, 91, 0.14)',
                           fontFamily: 'Inter, sans-serif',
                           fontSize: '0.79rem',
                           fontWeight: 700,
@@ -1125,10 +1129,10 @@ export default function DiscoverPage() {
                           minBlockSize: 40,
                           padding: '0.48rem 0.7rem',
                           borderRadius: 10,
-                          border: '1.5px solid rgba(74, 46, 32, 0.25)',
+                          border: '1.5px solid rgba(74, 46, 32, 0.28)',
                           background: '#ffffff',
                           color: 'var(--text-main)',
-                          boxShadow: '0 2px 6px rgba(74, 46, 32, 0.09)',
+                          boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
                           fontFamily: 'Inter, sans-serif',
                           fontSize: '0.79rem',
                           fontWeight: 700,
