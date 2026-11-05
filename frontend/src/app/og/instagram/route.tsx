@@ -13,17 +13,22 @@ export async function GET(request: Request) {
   const scout = searchParams.get('scout') || 'SipScouts'
   const signal = searchParams.get('signal') || 'High Local Craving Demand'
   const dist = searchParams.get('dist') || ''
-  const theme = searchParams.get('theme') || 'terracotta' // 'terracotta' | 'matcha' | 'espresso' | 'neon' | 'starry_hero'
+  const theme = searchParams.get('theme') || 'starry_hero'
 
   const width = 1080
   const height = format === 'square' ? 1080 : 1920
   const isStory = format === 'story'
-  const isStarryArt = theme === 'neon' || theme === 'starry_hero'
-  const isSeamlessMascotHero = theme === 'starry_hero' // The new seamless open layout without center box!
+
+  // The 4 Giant-Mascot "No Box" Artistic Themes
+  const isSeamlessMascotHero = [
+    'starry_hero',
+    'matcha_hero',
+    'espresso_hero',
+    'terracotta_hero',
+  ].includes(theme)
 
   const logoUrl = `${origin}/sipscouts-logo.png`
   const mascotUrl = `${origin}/sipscouts-mascot.jpg`
-  const starryNightUrl = `${origin}/starry-night.jpg`
 
   const topPillText =
     mode === 'trend'
@@ -40,43 +45,77 @@ export async function GET(request: Request) {
       ? `${signal} · Scouted live on SipScouts.com`
       : `📍 ${city}${dist ? ` · ${dist}` : ''} · Scouted by ${scout}`
 
-  // Vibrant theme palettes
-  const themeStyles = {
-    terracotta: {
-      bg: 'linear-gradient(155deg, #24130C 0%, #4A2E20 50%, #1A0E09 100%)',
-      border: '#E2725B',
-      cardBg: 'rgba(255, 248, 240, 0.08)',
-      cardBorder: 'rgba(255, 203, 164, 0.35)',
-      accentBg: 'rgba(226, 114, 91, 0.32)',
-      accentBorder: '#E2725B',
-      accentText: '#FFCBA4',
+  // Vibrant theme design configurations
+  const themeConfig = {
+    // 1. Speakeasy Starry Night (Van Gogh)
+    starry_hero: {
+      artUrl: `${origin}/starry-night.jpg`,
+      artOpacity: 0.46,
+      veilBg: 'linear-gradient(180deg, rgba(6,9,22,0.72) 0%, rgba(8,12,30,0.62) 50%, rgba(4,6,15,0.88) 100%)',
+      border: '#FFD166',
+      accentBg: 'rgba(255, 209, 102, 0.25)',
+      accentBorder: '#FFD166',
+      accentText: '#FFEAA7',
       badgeBg: '#E2725B',
-      mascotGlow: '0 0 45px rgba(226, 114, 91, 0.45)',
+      haloColor: 'rgba(255, 209, 102, 0.5)',
+      mascotGlow: '0 0 65px rgba(255, 209, 102, 0.8), 0 20px 50px rgba(0,0,0,0.6)',
+      pillBg: 'rgba(10, 16, 40, 0.88)',
+      pillBorder: '#FFD166',
+      pillText: '#FFD166',
     },
-    matcha: {
-      bg: 'linear-gradient(155deg, #102414 0%, #1E3D24 50%, #0B180E 100%)',
-      border: '#5B8C5A',
-      cardBg: 'rgba(255, 248, 240, 0.08)',
-      cardBorder: 'rgba(120, 177, 119, 0.38)',
-      accentBg: 'rgba(91, 140, 90, 0.35)',
+    // 2. Matcha Tea Garden (Hokusai Mt. Fuji Tea House)
+    matcha_hero: {
+      artUrl: `${origin}/art-matcha.jpg`,
+      artOpacity: 0.48,
+      veilBg: 'linear-gradient(180deg, rgba(8,20,12,0.74) 0%, rgba(12,28,16,0.64) 50%, rgba(6,16,10,0.9) 100%)',
+      border: '#78B177',
+      accentBg: 'rgba(120, 177, 119, 0.28)',
       accentBorder: '#78B177',
-      accentText: '#C4E8C2',
+      accentText: '#C8ECC7',
       badgeBg: '#5B8C5A',
-      mascotGlow: '0 0 45px rgba(91, 140, 90, 0.5)',
+      haloColor: 'rgba(120, 177, 119, 0.55)',
+      mascotGlow: '0 0 65px rgba(120, 177, 119, 0.8), 0 20px 50px rgba(0,0,0,0.6)',
+      pillBg: 'rgba(8, 22, 12, 0.88)',
+      pillBorder: '#78B177',
+      pillText: '#C8ECC7',
     },
-    espresso: {
-      bg: 'linear-gradient(155deg, #1C120C 0%, #382417 50%, #120B07 100%)',
+    // 3. Espresso Roastery (Van Gogh Café Terrace at Night)
+    espresso_hero: {
+      artUrl: `${origin}/art-espresso.jpg`,
+      artOpacity: 0.48,
+      veilBg: 'linear-gradient(180deg, rgba(20,12,8,0.74) 0%, rgba(28,17,10,0.62) 50%, rgba(14,8,5,0.9) 100%)',
       border: '#D4A373',
-      cardBg: 'rgba(255, 248, 240, 0.08)',
-      cardBorder: 'rgba(212, 163, 115, 0.35)',
       accentBg: 'rgba(212, 163, 115, 0.28)',
       accentBorder: '#D4A373',
       accentText: '#FAEDCD',
       badgeBg: '#D4A373',
-      mascotGlow: '0 0 45px rgba(212, 163, 115, 0.45)',
+      haloColor: 'rgba(212, 163, 115, 0.55)',
+      mascotGlow: '0 0 65px rgba(212, 163, 115, 0.8), 0 20px 50px rgba(0,0,0,0.6)',
+      pillBg: 'rgba(22, 14, 9, 0.9)',
+      pillBorder: '#D4A373',
+      pillText: '#FAEDCD',
     },
+    // 4. Terracotta Sunrise (Claude Monet Impression Sunrise)
+    terracotta_hero: {
+      artUrl: `${origin}/art-terracotta.jpg`,
+      artOpacity: 0.48,
+      veilBg: 'linear-gradient(180deg, rgba(28,14,10,0.74) 0%, rgba(42,20,14,0.62) 50%, rgba(18,8,6,0.9) 100%)',
+      border: '#E2725B',
+      accentBg: 'rgba(226, 114, 91, 0.32)',
+      accentBorder: '#E2725B',
+      accentText: '#FFCBA4',
+      badgeBg: '#E2725B',
+      haloColor: 'rgba(226, 114, 91, 0.55)',
+      mascotGlow: '0 0 65px rgba(226, 114, 91, 0.8), 0 20px 50px rgba(0,0,0,0.6)',
+      pillBg: 'rgba(28, 14, 10, 0.9)',
+      pillBorder: '#E2725B',
+      pillText: '#FFCBA4',
+    },
+    // Classic Boxed Neon / Speakeasy
     neon: {
-      bg: 'linear-gradient(155deg, #0A0F24 0%, #171E42 50%, #060814 100%)',
+      artUrl: `${origin}/starry-night.jpg`,
+      artOpacity: 0.52,
+      veilBg: 'linear-gradient(180deg, rgba(8,12,28,0.7) 0%, rgba(10,16,40,0.6) 50%, rgba(6,9,20,0.85) 100%)',
       border: '#FFD166',
       cardBg: 'rgba(10, 15, 36, 0.78)',
       cardBorder: 'rgba(255, 209, 102, 0.65)',
@@ -86,27 +125,53 @@ export async function GET(request: Request) {
       badgeBg: '#E2725B',
       mascotGlow: '0 0 55px rgba(255, 209, 102, 0.65)',
     },
-    starry_hero: {
-      bg: 'linear-gradient(155deg, #070B1A 0%, #121938 50%, #04060E 100%)',
-      border: '#FFD166',
-      cardBg: 'transparent',
-      cardBorder: 'transparent',
-      accentBg: 'rgba(255, 209, 102, 0.25)',
-      accentBorder: '#FFD166',
-      accentText: '#FFEAA7',
+    // Classic Boxed Terracotta
+    terracotta: {
+      border: '#E2725B',
+      cardBg: 'rgba(255, 248, 240, 0.08)',
+      cardBorder: 'rgba(255, 203, 164, 0.35)',
+      accentBg: 'rgba(226, 114, 91, 0.32)',
+      accentBorder: '#E2725B',
+      accentText: '#FFCBA4',
       badgeBg: '#E2725B',
-      mascotGlow: '0 0 70px rgba(255, 209, 102, 0.85)',
+      mascotGlow: '0 0 45px rgba(226, 114, 91, 0.45)',
     },
-  }[theme as 'terracotta' | 'matcha' | 'espresso' | 'neon' | 'starry_hero'] || {
-    bg: 'linear-gradient(155deg, #24130C 0%, #4A2E20 50%, #1A0E09 100%)',
-    border: '#E2725B',
-    cardBg: 'rgba(255, 248, 240, 0.08)',
-    cardBorder: 'rgba(255, 203, 164, 0.35)',
-    accentBg: 'rgba(226, 114, 91, 0.32)',
-    accentBorder: '#E2725B',
-    accentText: '#FFCBA4',
+    // Classic Boxed Matcha
+    matcha: {
+      border: '#5B8C5A',
+      cardBg: 'rgba(255, 248, 240, 0.08)',
+      cardBorder: 'rgba(120, 177, 119, 0.38)',
+      accentBg: 'rgba(91, 140, 90, 0.35)',
+      accentBorder: '#78B177',
+      accentText: '#C4E8C2',
+      badgeBg: '#5B8C5A',
+      mascotGlow: '0 0 45px rgba(91, 140, 90, 0.5)',
+    },
+    // Classic Boxed Espresso
+    espresso: {
+      border: '#D4A373',
+      cardBg: 'rgba(255, 248, 240, 0.08)',
+      cardBorder: 'rgba(212, 163, 115, 0.35)',
+      accentBg: 'rgba(212, 163, 115, 0.28)',
+      accentBorder: '#D4A373',
+      accentText: '#FAEDCD',
+      badgeBg: '#D4A373',
+      mascotGlow: '0 0 45px rgba(212, 163, 115, 0.45)',
+    },
+  }[theme as string] || {
+    artUrl: `${origin}/starry-night.jpg`,
+    artOpacity: 0.46,
+    veilBg: 'linear-gradient(180deg, rgba(6,9,22,0.72) 0%, rgba(8,12,30,0.62) 50%, rgba(4,6,15,0.88) 100%)',
+    border: '#FFD166',
+    accentBg: 'rgba(255, 209, 102, 0.25)',
+    accentBorder: '#FFD166',
+    accentText: '#FFEAA7',
     badgeBg: '#E2725B',
-    mascotGlow: '0 0 45px rgba(226, 114, 91, 0.45)',
+    haloColor: 'rgba(255, 209, 102, 0.5)',
+    mascotGlow: '0 0 65px rgba(255, 209, 102, 0.8), 0 20px 50px rgba(0,0,0,0.6)',
+    pillBg: 'rgba(10, 16, 40, 0.88)',
+    pillBorder: '#FFD166',
+    pillText: '#FFD166',
   }
 
   return new ImageResponse(
@@ -118,39 +183,38 @@ export async function GET(request: Request) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          background: themeStyles.bg,
+          background: '#0a0d18',
           color: '#FAF3E8',
           padding: isStory ? '85px 68px' : '52px 52px',
           fontFamily: 'sans-serif',
-          border: `16px solid ${themeStyles.border}`,
+          border: `16px solid ${themeConfig.border}`,
           position: 'relative',
         }}
       >
-        {/* "Starry Night" Artistic Background Underlay (For Starry Night Themes) */}
-        {isStarryArt && (
+        {/* Artistic Background Underlay */}
+        {themeConfig.artUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={starryNightUrl}
-            alt="Starry Night Background"
+            src={themeConfig.artUrl}
+            alt="Artistic Background"
             style={{
               position: 'absolute',
               inset: 0,
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: isSeamlessMascotHero ? 0.45 : 0.52,
+              opacity: themeConfig.artOpacity || 0.46,
             }}
           />
         )}
 
         {/* Readability veil over artwork */}
-        {isStarryArt && (
+        {themeConfig.veilBg && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              background:
-                'linear-gradient(180deg, rgba(6,9,22,0.72) 0%, rgba(8,12,30,0.62) 50%, rgba(4,6,15,0.88) 100%)',
+              background: themeConfig.veilBg,
             }}
           />
         )}
@@ -209,13 +273,13 @@ export async function GET(request: Request) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              background: themeStyles.accentBg,
-              border: `2px solid ${themeStyles.accentBorder}`,
+              background: themeConfig.accentBg,
+              border: `2px solid ${themeConfig.accentBorder}`,
               borderRadius: '999px',
               padding: isStory ? '12px 28px' : '8px 20px',
               fontSize: isStory ? '22px' : '17px',
               fontWeight: 800,
-              color: themeStyles.accentText,
+              color: themeConfig.accentText,
               letterSpacing: '1px',
               boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
             }}
@@ -224,7 +288,7 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        {/* ── VERSION B: SEAMLESS GIANT CENTERED MASCOT (NO BOXES) ── */}
+        {/* ── SEAMLESS GIANT CENTERED MASCOT LAYOUT (NO BOXES) ── */}
         {isSeamlessMascotHero ? (
           <div
             style={{
@@ -239,7 +303,7 @@ export async function GET(request: Request) {
               padding: '12px 0',
             }}
           >
-            {/* Giant Centered Mascot (Zero white margins, seamless circular gold halo) */}
+            {/* Giant Centered Mascot */}
             <div
               style={{
                 position: 'relative',
@@ -250,14 +314,14 @@ export async function GET(request: Request) {
                 height: isStory ? '580px' : '480px',
               }}
             >
-              {/* Outer Golden Aura Ring */}
+              {/* Radial Aura Halo */}
               <div
                 style={{
                   position: 'absolute',
                   inset: 0,
                   borderRadius: '999px',
-                  background: 'radial-gradient(circle, rgba(255, 209, 102, 0.45) 0%, rgba(226, 114, 91, 0.15) 60%, transparent 80%)',
-                  filter: 'blur(18px)',
+                  background: `radial-gradient(circle, ${themeConfig.haloColor || 'rgba(255,209,102,0.45)'} 0%, transparent 75%)`,
+                  filter: 'blur(20px)',
                 }}
               />
 
@@ -269,20 +333,20 @@ export async function GET(request: Request) {
                 height={isStory ? 540 : 440}
                 style={{
                   borderRadius: '999px',
-                  border: '8px solid #FFD166',
+                  border: `8px solid ${themeConfig.border}`,
                   objectFit: 'cover',
-                  boxShadow: '0 0 60px rgba(255, 209, 102, 0.75), 0 20px 50px rgba(0,0,0,0.6)',
+                  boxShadow: themeConfig.mascotGlow,
                 }}
               />
 
-              {/* Scout Approved Badge floating on top of the mascot */}
+              {/* Scout Approved Badge */}
               <div
                 style={{
                   position: 'absolute',
                   top: '12px',
                   display: 'flex',
                   alignItems: 'center',
-                  background: '#E2725B',
+                  background: themeConfig.badgeBg,
                   color: '#FFFFFF',
                   borderRadius: '999px',
                   padding: isStory ? '10px 28px' : '8px 22px',
@@ -325,16 +389,15 @@ export async function GET(request: Request) {
                 style={{
                   fontSize: isStory ? '32px' : '24px',
                   lineHeight: 1.35,
-                  color: '#FFEAA7',
+                  color: themeConfig.accentText,
                   fontWeight: 700,
-                  textShadow:
-                    '0 2px 0 #000, 0 4px 14px rgba(0,0,0,0.9)',
+                  textShadow: '0 2px 0 #000, 0 4px 14px rgba(0,0,0,0.9)',
                 }}
               >
                 {subText}
               </div>
 
-              {/* Tag Pills floating cleanly without box */}
+              {/* Tag Pills */}
               <div
                 style={{
                   display: 'flex',
@@ -349,7 +412,7 @@ export async function GET(request: Request) {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      background: '#E2725B',
+                      background: themeConfig.badgeBg,
                       color: '#FFFFFF',
                       borderRadius: '999px',
                       padding: isStory ? '14px 32px' : '10px 24px',
@@ -365,9 +428,9 @@ export async function GET(request: Request) {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    background: 'rgba(10, 16, 40, 0.85)',
-                    border: '2.5px solid #FFD166',
-                    color: '#FFD166',
+                    background: themeConfig.pillBg || 'rgba(10, 16, 40, 0.85)',
+                    border: `2.5px solid ${themeConfig.pillBorder || themeConfig.border}`,
+                    color: themeConfig.pillText || themeConfig.accentText,
                     borderRadius: '999px',
                     padding: isStory ? '14px 32px' : '10px 24px',
                     fontSize: isStory ? '28px' : '22px',
@@ -381,14 +444,14 @@ export async function GET(request: Request) {
             </div>
           </div>
         ) : (
-          /* ── VERSION A: THE CLASSIC BOXED SPOTLIGHT CARD ── */
+          /* ── THE CLASSIC BOXED SPOTLIGHT CARD ── */
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               gap: isStory ? '28px' : '18px',
-              background: themeStyles.cardBg,
-              border: `3px solid ${themeStyles.cardBorder}`,
+              background: (themeConfig as any).cardBg || 'rgba(255, 248, 240, 0.08)',
+              border: `3px solid ${(themeConfig as any).cardBorder || 'rgba(255, 203, 164, 0.35)'}`,
               borderRadius: '40px',
               padding: isStory ? '54px 50px' : '38px 42px',
               marginTop: '10px',
@@ -399,23 +462,6 @@ export async function GET(request: Request) {
               boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
             }}
           >
-            {/* Subtle Artistic Watermark of Mascot in background of card */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={mascotUrl}
-              alt="Mascot Watermark"
-              style={{
-                position: 'absolute',
-                right: '-60px',
-                bottom: '-60px',
-                width: isStory ? '420px' : '320px',
-                height: isStory ? '420px' : '320px',
-                borderRadius: '999px',
-                opacity: 0.12,
-                filter: 'blur(1px)',
-              }}
-            />
-
             {/* Mascot Centerpiece Feature Badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -428,7 +474,7 @@ export async function GET(request: Request) {
                   borderRadius: '32px',
                   border: '4px solid #FAF3E8',
                   objectFit: 'cover',
-                  boxShadow: themeStyles.mascotGlow,
+                  boxShadow: themeConfig.mascotGlow,
                   flexShrink: 0,
                 }}
               />
@@ -436,7 +482,7 @@ export async function GET(request: Request) {
                 <span
                   style={{
                     fontSize: isStory ? '24px' : '19px',
-                    color: themeStyles.accentText,
+                    color: themeConfig.accentText,
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '1.5px',
@@ -496,7 +542,7 @@ export async function GET(request: Request) {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    background: themeStyles.badgeBg,
+                    background: themeConfig.badgeBg,
                     color: '#FFFFFF',
                     borderRadius: '999px',
                     padding: isStory ? '14px 32px' : '10px 24px',
@@ -545,7 +591,7 @@ export async function GET(request: Request) {
           <div
             style={{
               display: 'flex',
-              background: themeStyles.badgeBg,
+              background: themeConfig.badgeBg,
               color: '#FFFFFF',
               padding: isStory ? '20px 44px' : '12px 30px',
               borderRadius: '999px',

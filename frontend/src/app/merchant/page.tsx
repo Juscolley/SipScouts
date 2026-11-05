@@ -476,30 +476,60 @@ export default function MerchantDashboard() {
                           </button>
                         </div>
 
-                        {/* Theme Picker (Terracotta, Matcha, Espresso, Starry Night Box, Starry Night Hero Mascot) */}
+                        {/* Theme Picker */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                            🎨 Theme / Layout:
+                            🎨 Lively Mascot Layouts:
                           </span>
                           {[
-                            { key: 'starry_hero', label: '🌌 Giant Mascot (Starry Night - No Box)' },
-                            { key: 'neon', label: '🍸 Boxed Speakeasy (Starry Night)' },
-                            { key: 'terracotta', label: '🏺 Terracotta' },
-                            { key: 'matcha', label: '🍵 Matcha' },
-                            { key: 'espresso', label: '☕ Espresso' },
+                            { key: 'starry_hero', label: '🌌 Speakeasy (Starry Night)' },
+                            { key: 'matcha_hero', label: '🍵 Matcha Zen Garden (Hokusai)' },
+                            { key: 'espresso_hero', label: '☕ Dark Roast (Van Gogh Cafe)' },
+                            { key: 'terracotta_hero', label: '🏺 Terracotta Sunrise (Monet)' },
                           ].map(t => (
                             <button
                               key={t.key}
                               type="button"
                               onClick={() => setIgTheme(t.key as any)}
                               style={{
-                                padding: '0.28rem 0.65rem',
+                                padding: '0.3rem 0.7rem',
                                 borderRadius: 8,
                                 border: igTheme === t.key ? '2px solid var(--primary)' : '1px solid var(--border)',
                                 background: igTheme === t.key ? 'var(--primary)' : '#ffffff',
                                 color: igTheme === t.key ? '#ffffff' : 'var(--text-main)',
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Classic Boxed Designs */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                            📦 Classic Boxed:
+                          </span>
+                          {[
+                            { key: 'neon', label: '🍸 Boxed Speakeasy' },
+                            { key: 'terracotta', label: '🏺 Boxed Terracotta' },
+                            { key: 'matcha', label: '🍵 Boxed Matcha' },
+                            { key: 'espresso', label: '☕ Boxed Espresso' },
+                          ].map(t => (
+                            <button
+                              key={t.key}
+                              type="button"
+                              onClick={() => setIgTheme(t.key as any)}
+                              style={{
+                                padding: '0.22rem 0.55rem',
+                                borderRadius: 6,
+                                border: igTheme === t.key ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                                background: igTheme === t.key ? 'rgba(226, 114, 91, 0.15)' : 'transparent',
+                                color: igTheme === t.key ? 'var(--primary)' : 'var(--text-light)',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
                                 cursor: 'pointer',
                               }}
                             >
