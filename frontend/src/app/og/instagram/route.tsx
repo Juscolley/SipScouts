@@ -47,7 +47,10 @@ export async function GET(request: Request) {
 
   // Vibrant theme design configurations
   const themeConfig = {
-    // ── 1. LIVELY GIANT MASCOT THEMES (FAMOUS ARTWORKS) ──
+    // ══════════════════════════════════════════════════════════════════
+    // 1. LIVELY MASCOT LAYOUTS (FAMOUS ARTWORKS · ZERO-BOX OPEN DESIGN)
+    // Ordered: 1. Speakeasy, 2. Matcha, 3. Dark Roast, 4. Terracotta
+    // ══════════════════════════════════════════════════════════════════
     starry_hero: {
       artUrl: `${origin}/starry-night.jpg`,
       artOpacity: 0.46,
@@ -109,14 +112,17 @@ export async function GET(request: Request) {
       pillText: '#FFCBA4',
     },
 
-    // ── 2. DISTINCT CLASSIC BOXED THEMES (CRAFT TEXTURES & EDITORIAL CLUB CARDS) ──
-    // Speakeasy Art Deco (Gold & Midnight Blue Lounge Texture)
+    // ══════════════════════════════════════════════════════════════════
+    // 2. CLASSIC BOXED LAYOUTS (MASTERPIECE BACKDROPS · EDITORIAL CARDS)
+    // Ordered: 1. Speakeasy, 2. Matcha, 3. Dark Roast, 4. Terracotta
+    // ══════════════════════════════════════════════════════════════════
+    // 1. Speakeasy Boxed (Edward Hopper — "Nighthawks", 1942)
     neon: {
-      artUrl: `${origin}/box-artdeco.jpg`,
-      artOpacity: 0.38,
-      veilBg: 'linear-gradient(180deg, rgba(10,14,32,0.82) 0%, rgba(14,20,45,0.74) 50%, rgba(6,9,22,0.92) 100%)',
+      artUrl: `${origin}/box-nighthawks.jpg`,
+      artOpacity: 0.45,
+      veilBg: 'linear-gradient(180deg, rgba(10,14,28,0.78) 0%, rgba(14,22,42,0.68) 50%, rgba(6,9,20,0.9) 100%)',
       border: '#FFD166',
-      cardBg: 'rgba(10, 16, 38, 0.85)',
+      cardBg: 'rgba(8, 14, 30, 0.84)',
       cardBorder: 'rgba(255, 209, 102, 0.65)',
       accentBg: 'rgba(255, 209, 102, 0.22)',
       accentBorder: '#FFD166',
@@ -124,47 +130,47 @@ export async function GET(request: Request) {
       badgeBg: '#E2725B',
       mascotGlow: '0 0 50px rgba(255, 209, 102, 0.7)',
     },
-    // Terracotta Explorer (Vintage Parchment & Scout Map Texture)
-    terracotta: {
-      artUrl: `${origin}/box-parchment.jpg`,
-      artOpacity: 0.32,
-      veilBg: 'linear-gradient(180deg, rgba(38,18,10,0.85) 0%, rgba(55,28,16,0.76) 50%, rgba(24,10,6,0.92) 100%)',
-      border: '#E2725B',
-      cardBg: 'rgba(42, 22, 14, 0.84)',
-      cardBorder: 'rgba(255, 203, 164, 0.45)',
-      accentBg: 'rgba(226, 114, 91, 0.32)',
-      accentBorder: '#E2725B',
-      accentText: '#FFCBA4',
-      badgeBg: '#E2725B',
-      mascotGlow: '0 0 45px rgba(226, 114, 91, 0.55)',
-    },
-    // Matcha Ceremonial (Japanese Washi Textured Paper)
+    // 2. Matcha Boxed (Hiroshige — "Plum Garden at Kameido")
     matcha: {
-      artUrl: `${origin}/box-paper.jpg`,
-      artOpacity: 0.32,
-      veilBg: 'linear-gradient(180deg, rgba(12,24,14,0.84) 0%, rgba(18,36,22,0.75) 50%, rgba(8,16,10,0.92) 100%)',
+      artUrl: `${origin}/box-hiroshige.jpg`,
+      artOpacity: 0.45,
+      veilBg: 'linear-gradient(180deg, rgba(10,22,12,0.78) 0%, rgba(16,32,18,0.68) 50%, rgba(8,16,10,0.92) 100%)',
       border: '#78B177',
-      cardBg: 'rgba(12, 26, 16, 0.85)',
-      cardBorder: 'rgba(120, 177, 119, 0.48)',
+      cardBg: 'rgba(10, 24, 14, 0.84)',
+      cardBorder: 'rgba(120, 177, 119, 0.55)',
       accentBg: 'rgba(120, 177, 119, 0.32)',
       accentBorder: '#78B177',
       accentText: '#C8ECC7',
       badgeBg: '#5B8C5A',
-      mascotGlow: '0 0 45px rgba(120, 177, 119, 0.55)',
+      mascotGlow: '0 0 45px rgba(120, 177, 119, 0.6)',
     },
-    // Espresso Roastery (Vintage Roasted Wood & Coffeehouse Texture)
+    // 3. Espresso Boxed (Paul Cézanne — "The Card Players")
     espresso: {
-      artUrl: `${origin}/box-wood.jpg`,
-      artOpacity: 0.34,
-      veilBg: 'linear-gradient(180deg, rgba(24,14,8,0.85) 0%, rgba(35,20,12,0.75) 50%, rgba(16,8,5,0.94) 100%)',
+      artUrl: `${origin}/box-cezanne.jpg`,
+      artOpacity: 0.45,
+      veilBg: 'linear-gradient(180deg, rgba(22,12,8,0.78) 0%, rgba(32,18,10,0.68) 50%, rgba(14,8,5,0.92) 100%)',
       border: '#D4A373',
-      cardBg: 'rgba(26, 15, 9, 0.86)',
-      cardBorder: 'rgba(212, 163, 115, 0.45)',
+      cardBg: 'rgba(24, 14, 8, 0.85)',
+      cardBorder: 'rgba(212, 163, 115, 0.55)',
       accentBg: 'rgba(212, 163, 115, 0.28)',
       accentBorder: '#D4A373',
       accentText: '#FAEDCD',
       badgeBg: '#D4A373',
-      mascotGlow: '0 0 45px rgba(212, 163, 115, 0.55)',
+      mascotGlow: '0 0 45px rgba(212, 163, 115, 0.6)',
+    },
+    // 4. Terracotta Boxed (Gustav Klimt — "The Kiss" Gold Mosaic)
+    terracotta: {
+      artUrl: `${origin}/box-klimt.jpg`,
+      artOpacity: 0.42,
+      veilBg: 'linear-gradient(180deg, rgba(32,16,10,0.78) 0%, rgba(48,24,14,0.68) 50%, rgba(20,10,6,0.92) 100%)',
+      border: '#E2725B',
+      cardBg: 'rgba(38, 20, 12, 0.85)',
+      cardBorder: 'rgba(255, 203, 164, 0.5)',
+      accentBg: 'rgba(226, 114, 91, 0.32)',
+      accentBorder: '#E2725B',
+      accentText: '#FFCBA4',
+      badgeBg: '#E2725B',
+      mascotGlow: '0 0 45px rgba(226, 114, 91, 0.6)',
     },
   }[theme as string] || {
     border: '#E2725B',
@@ -192,12 +198,12 @@ export async function GET(request: Request) {
           position: 'relative',
         }}
       >
-        {/* Artistic Background Underlay (Artwork or Craft Texture) */}
+        {/* Artistic Masterpiece Background Underlay */}
         {themeConfig.artUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={themeConfig.artUrl}
-            alt="Artistic Background"
+            alt="Artistic Masterpiece Background"
             style={{
               position: 'absolute',
               inset: 0,
@@ -445,7 +451,7 @@ export async function GET(request: Request) {
             </div>
           </div>
         ) : (
-          /* ── DISTINCT CLASSIC BOXED SPOTLIGHT CARD (CRAFT TEXTURES & GLOW) ── */
+          /* ── CLASSIC BOXED SPOTLIGHT CARD (FINE ART MASTERPIECE BACKDROPS) ── */
           <div
             style={{
               display: 'flex',

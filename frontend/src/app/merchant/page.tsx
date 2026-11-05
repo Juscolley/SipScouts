@@ -476,16 +476,16 @@ export default function MerchantDashboard() {
                           </button>
                         </div>
 
-                        {/* Theme Picker */}
+                        {/* 1. Lively Mascot Layouts (Zero-Box Open Masterpieces) */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                             🎨 Lively Mascot Layouts:
                           </span>
                           {[
                             { key: 'starry_hero', label: '🌌 Speakeasy (Starry Night)' },
-                            { key: 'matcha_hero', label: '🍵 Matcha Zen Garden (Hokusai)' },
+                            { key: 'matcha_hero', label: '🍵 Matcha (Hokusai Mt. Fuji)' },
                             { key: 'espresso_hero', label: '☕ Dark Roast (Van Gogh Cafe)' },
-                            { key: 'terracotta_hero', label: '🏺 Terracotta Sunrise (Monet)' },
+                            { key: 'terracotta_hero', label: '🏺 Terracotta (Monet Sunrise)' },
                           ].map(t => (
                             <button
                               key={t.key}
@@ -507,16 +507,16 @@ export default function MerchantDashboard() {
                           ))}
                         </div>
 
-                        {/* Classic Boxed Designs with Craft Textures */}
+                        {/* 2. Classic Boxed Layouts (Masterpiece Backdrops · Exact Same Order) */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                            📦 Classic Boxed (Craft Textures):
+                            📦 Classic Boxed Layouts:
                           </span>
                           {[
-                            { key: 'neon', label: '🍸 Boxed Speakeasy (Art Deco Gold)' },
-                            { key: 'terracotta', label: '🏺 Boxed Terracotta (Scout Parchment)' },
-                            { key: 'matcha', label: '🍵 Boxed Matcha (Japanese Washi)' },
-                            { key: 'espresso', label: '☕ Boxed Espresso (Vintage Wood Grain)' },
+                            { key: 'neon', label: '🍸 Speakeasy (Hopper Nighthawks)' },
+                            { key: 'matcha', label: '🍵 Matcha (Hiroshige Plum Garden)' },
+                            { key: 'espresso', label: '☕ Dark Roast (Cézanne Card Players)' },
+                            { key: 'terracotta', label: '🏺 Terracotta (Klimt The Kiss)' },
                           ].map(t => (
                             <button
                               key={t.key}
