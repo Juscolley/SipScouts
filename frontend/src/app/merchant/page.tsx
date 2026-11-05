@@ -507,16 +507,16 @@ export default function MerchantDashboard() {
                           ))}
                         </div>
 
-                        {/* Classic Boxed Designs */}
+                        {/* Classic Boxed Designs with Craft Textures */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                            📦 Classic Boxed:
+                            📦 Classic Boxed (Craft Textures):
                           </span>
                           {[
-                            { key: 'neon', label: '🍸 Boxed Speakeasy' },
-                            { key: 'terracotta', label: '🏺 Boxed Terracotta' },
-                            { key: 'matcha', label: '🍵 Boxed Matcha' },
-                            { key: 'espresso', label: '☕ Boxed Espresso' },
+                            { key: 'neon', label: '🍸 Boxed Speakeasy (Art Deco Gold)' },
+                            { key: 'terracotta', label: '🏺 Boxed Terracotta (Scout Parchment)' },
+                            { key: 'matcha', label: '🍵 Boxed Matcha (Japanese Washi)' },
+                            { key: 'espresso', label: '☕ Boxed Espresso (Vintage Wood Grain)' },
                           ].map(t => (
                             <button
                               key={t.key}
