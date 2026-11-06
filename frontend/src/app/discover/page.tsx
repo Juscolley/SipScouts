@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase'
 import { trackVenueAction } from '@/lib/analytics'
 import NotificationBell from '@/components/NotificationBell'
 import InstallAppButton from '@/components/InstallAppButton'
+import FeedbackModal from '@/components/FeedbackModal'
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false })
 
@@ -73,6 +74,8 @@ export default function DiscoverPage() {
   const [deepLinkCopied, setDeepLinkCopied] = useState(false)
   const [storyModalVenue, setStoryModalVenue] = useState<Venue | null>(null)
   const [storyCaptionCopied, setStoryCaptionCopied] = useState(false)
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+  const [feedbackDefaultWish, setFeedbackDefaultWish] = useState('')
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn, userId, isAdmin } = useBookmarks()
@@ -427,6 +430,29 @@ export default function DiscoverPage() {
             <span className="active">Discover</span>
             <a href="/bookmarks">Saved</a>
             <a href="/profile">Profile</a>
+            <button
+              type="button"
+              onClick={() => {
+                setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
+                setFeedbackModalOpen(true)
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.2rem 0.4rem',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+              title="What's one drink or feature you wish SipScouts had?"
+            >
+              💡 Wish a Drink
+            </button>
             <a
               href="https://www.instagram.com/sipscoutsapp/"
               target="_blank"
@@ -754,8 +780,34 @@ export default function DiscoverPage() {
                 </p>
               </div>
             ) : venues.length === 0 ? (
-              <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No venues found within 55 miles yet. Try a different drink, ingredient, or city!
+              <div className="glass" style={{ padding: '2.75rem 1.5rem', textAlign: 'center', borderRadius: 24, maxWidth: 540, margin: '0 auto' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.6rem' }}>🔍</div>
+                <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.3rem', color: 'var(--text-main)', margin: '0 0 0.45rem' }}>
+                  No exact matches found within 55 miles
+                </h3>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.88rem', color: 'var(--text-light)', margin: '0 auto 1.35rem', lineHeight: 1.5 }}>
+                  Can&apos;t find &ldquo;{queryLabel}&rdquo;? Tell our scouts what drink or feature you wish SipScouts had, and we&apos;ll scout nearby spots or notify you when it lands!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
+                    setFeedbackModalOpen(true)
+                  }}
+                  className="warm-btn"
+                  style={{
+                    padding: '0.65rem 1.35rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    borderRadius: 99,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                  }}
+                >
+                  <span>💡</span>
+                  <span>Wish This Drink into SipScouts →</span>
+                </button>
               </div>
             ) : (
               (() => {
@@ -1220,6 +1272,37 @@ export default function DiscoverPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Inline Community Wish Invitation */}
+                    <div
+                      className="glass"
+                      style={{
+                        padding: '1.25rem 1.5rem',
+                        borderRadius: 20,
+                        textAlign: 'center',
+                        background: 'rgba(255, 255, 255, 0.92)',
+                        border: '1.5px dashed rgba(226, 114, 91, 0.45)',
+                        marginTop: '0.5rem',
+                      }}
+                    >
+                      <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.15rem', color: 'var(--text-main)', margin: '0 0 0.3rem' }}>
+                        What&apos;s one drink or feature you wish SipScouts had?
+                      </h3>
+                      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', margin: '0 0 0.85rem' }}>
+                        Help shape the next release — tell our scouting team what you&apos;d love to discover next.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
+                          setFeedbackModalOpen(true)
+                        }}
+                        className="warm-btn"
+                        style={{ padding: '0.5rem 1.15rem', fontSize: '0.84rem', borderRadius: 99 }}
+                      >
+                        💡 Add to Scout Wishlist →
+                      </button>
+                    </div>
                   </div>
                 )
               })()
@@ -1450,6 +1533,49 @@ export default function DiscoverPage() {
           </div>
         )
       })()}
+
+      {/* Floating Community Wishlist Button */}
+      <button
+        type="button"
+        onClick={() => {
+          setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
+          setFeedbackModalOpen(true)
+        }}
+        aria-label="Wish a drink or feature for SipScouts"
+        style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 20,
+          zIndex: 80,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          padding: '0.62rem 1.05rem',
+          borderRadius: 99,
+          background: 'rgba(252, 246, 240, 0.96)',
+          border: '1.5px solid var(--primary)',
+          boxShadow: '0 4px 18px rgba(74, 46, 32, 0.22)',
+          cursor: 'pointer',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '0.82rem',
+          fontWeight: 700,
+          color: 'var(--primary)',
+          backdropFilter: 'blur(8px)',
+        }}
+        title="What's one drink or feature you wish SipScouts had?"
+      >
+        <span style={{ fontSize: '1rem' }}>💡</span>
+        <span>Wish a Drink or Feature</span>
+      </button>
+
+      {/* Community Wishlist & Feedback Modal */}
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        defaultWish={feedbackDefaultWish}
+        defaultCityOrZip={locationInput.trim() || geo.cityLabel || ''}
+        userId={userId}
+      />
     </div>
   )
 }

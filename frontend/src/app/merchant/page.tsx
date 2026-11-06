@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { getLocalVenueClicksBackup } from '@/lib/analytics'
+import { UserFeedbackRow, getLocalFeedbackBackup } from '@/lib/feedback'
 
 interface HourBucket {
   hour_bucket: string
@@ -43,6 +44,7 @@ const CREATOR_ADMIN_EMAIL = 'juscolley0603@gmail.com'
 export default function MerchantDashboard() {
   const [rows, setRows] = useState<HourBucket[]>([])
   const [clickRows, setClickRows] = useState<VenueClickRow[]>([])
+  const [feedbackRows, setFeedbackRows] = useState<UserFeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [isAuthorizedCreator, setIsAuthorizedCreator] = useState(false)
   const [locationFilter, setLocationFilter] = useState('')
@@ -79,7 +81,12 @@ export default function MerchantDashboard() {
           .select('*')
           .order('clicked_at', { ascending: false })
           .limit(200),
-      ]).then(([analyticsRes, clicksRes]) => {
+        supabase
+          .from('user_feedback')
+          .select('*')
+          .order('submitted_at', { ascending: false })
+          .limit(150),
+      ]).then(([analyticsRes, clicksRes, feedbackRes]) => {
         const d = ((analyticsRes.data ?? []) as HourBucket[])
         setRows(d)
 
@@ -87,6 +94,21 @@ export default function MerchantDashboard() {
         const localBackup = getLocalVenueClicksBackup() as VenueClickRow[]
         const mergedClicks = dbClicks.length > 0 ? dbClicks : localBackup
         setClickRows(mergedClicks)
+
+        const dbFeedback = ((feedbackRes?.data ?? []) as UserFeedbackRow[])
+        const localFeedback = getLocalFeedbackBackup()
+        const feedbackMap = new Map<string, UserFeedbackRow>()
+        dbFeedback.forEach(f => feedbackMap.set(f.id, f))
+        localFeedback.forEach(f => {
+          if (!feedbackMap.has(f.id)) feedbackMap.set(f.id, f)
+        })
+        const mergedFeedback = Array.from(feedbackMap.values()).sort(
+          (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+        )
+        setFeedbackRows(mergedFeedback)
+
+        setLoading(false)
+      }).catch(() => {
         setLoading(false)
       })
     })
@@ -112,6 +134,17 @@ export default function MerchantDashboard() {
         (c.venue_address ?? '').toLowerCase().includes(q)
     )
   }, [clickRows, locationFilter])
+
+  const filteredFeedback = useMemo(() => {
+    const q = locationFilter.trim().toLowerCase()
+    if (!q) return feedbackRows
+    return feedbackRows.filter(
+      f =>
+        (f.city_or_zip ?? '').toLowerCase().includes(q) ||
+        (f.craving_or_feature_wish ?? '').toLowerCase().includes(q) ||
+        (f.user_email ?? '').toLowerCase().includes(q)
+    )
+  }, [feedbackRows, locationFilter])
 
   const {
     totalSearches,
@@ -261,6 +294,7 @@ export default function MerchantDashboard() {
     { label: 'Peak Craving Hour', value: peakHour },
     { label: 'Venue Leads & Shares', value: totalLeadsAndShares },
     { label: 'Tracked Cravings', value: unmetOpportunities.length },
+    { label: 'Community Wishes', value: filteredFeedback.length },
   ]
 
   return (
@@ -785,7 +819,92 @@ export default function MerchantDashboard() {
                 )}
               </div>
 
-              {/* 3. RAW HOURLY SEARCH LOG */}
+              {/* 3. COMMUNITY WISHES & USER FEEDBACK */}
+              <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
+                <div style={{ padding: '1.1rem 1.35rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h2 className="section-title" style={{ margin: 0, color: 'var(--text-main)' }}>
+                      💡 Community Wishes &amp; User Feedback
+                    </h2>
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '0.2rem' }}>
+                      Real answers to &ldquo;What&apos;s one drink or feature you wish SipScouts had?&rdquo; from active scouts.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span className="tag tag-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                      {filteredFeedback.length} {filteredFeedback.length === 1 ? 'Wish' : 'Wishes'}
+                    </span>
+                  </div>
+                </div>
+
+                {filteredFeedback.length === 0 ? (
+                  <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif', fontSize: '0.88rem' }}>
+                    No community wishes logged yet. As scouts submit requests via the &ldquo;Wish a Drink or Feature&rdquo; modal, their feedback will appear here in real-time.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="warm-table">
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: 140 }}>Submitted</th>
+                          <th style={{ minWidth: 260 }}>What&apos;s one drink or feature you wish SipScouts had?</th>
+                          <th>Market (City / ZIP)</th>
+                          <th>User Contact</th>
+                          <th>Device</th>
+                          <th style={{ textAlign: 'right' }}>Growth Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredFeedback.map((f, i) => (
+                          <tr key={f.id || i}>
+                            <td style={{ color: 'var(--text-light)', fontSize: '0.78rem' }}>
+                              {new Date(f.submitted_at).toLocaleString()}
+                            </td>
+                            <td style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+                              💡 &ldquo;{f.craving_or_feature_wish}&rdquo;
+                            </td>
+                            <td style={{ color: 'var(--text-light)', fontSize: '0.82rem' }}>
+                              {f.city_or_zip || '—'}
+                            </td>
+                            <td style={{ fontSize: '0.82rem' }}>
+                              {f.user_email ? (
+                                <a href={`mailto:${f.user_email}`} style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                                  ✉️ {f.user_email}
+                                </a>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)' }}>Anonymous Scout</span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="tag" style={{ fontSize: '0.72rem', textTransform: 'capitalize' }}>
+                                {f.device_type === 'desktop' ? '💻 Desktop' : '📱 Mobile'}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIgMode('trend')
+                                  setIgDrink(f.craving_or_feature_wish.slice(0, 45))
+                                  if (f.city_or_zip) setIgCity(f.city_or_zip)
+                                  window.scrollTo({ top: 350, behavior: 'smooth' })
+                                }}
+                                className="warm-btn-ghost"
+                                style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                title="Turn this user wish into an Instagram Craving Spotlight graphic"
+                              >
+                                📸 Make IG Spotlight
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. RAW HOURLY SEARCH LOG */}
               <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
                   <h2 className="section-title" style={{ margin: 0 }}>Recent Search Activity Log</h2>
