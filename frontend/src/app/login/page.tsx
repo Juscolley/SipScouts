@@ -6,8 +6,10 @@ import { createClient } from '@/lib/supabase'
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'join'>('signin')
   const [email, setEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -65,6 +67,28 @@ export default function LoginPage() {
     } else {
       setSent(true)
       setLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    const cleanToken = otpCode.trim()
+    if (!cleanToken) return
+    setVerifying(true)
+    setError('')
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token: cleanToken,
+      type: 'email',
+    })
+    if (error) {
+      setError(error.message)
+      setVerifying(false)
+    } else if (data?.session) {
+      window.location.replace('/profile')
+    } else {
+      window.location.replace('/profile')
     }
   }
 
@@ -157,20 +181,65 @@ export default function LoginPage() {
           </p>
 
           {sent ? (
-            <div style={{ padding: '1.5rem', background: 'rgba(226,114,91,0.08)', borderRadius: 14, border: '1px solid rgba(226,114,91,0.2)' }}>
-              <p style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>✨</p>
-              <p style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '0.4rem' }}>
-                {mode === 'signin' ? '1-Tap Sign-In Link Sent!' : 'Magic Setup Link Sent!'}
-              </p>
-              <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-                Check your inbox at <strong>{email}</strong> and tap the link to{' '}
-                {mode === 'signin'
-                  ? 'open your existing Member Hub, Saved Places & Favorites.'
-                  : 'set up your Profile & Saved Places.'}
-              </p>
-              <p style={{ fontFamily: 'Inter, sans-serif', color: 'var(--text-muted)', fontSize: '0.78rem', lineHeight: 1.45 }}>
-                💡 <em>Check your Spam/Promotions folder if the email doesn&apos;t appear within 30 seconds.</em>
-              </p>
+            <div style={{ padding: '1.5rem', background: 'rgba(226,114,91,0.08)', borderRadius: 14, border: '1px solid rgba(226,114,91,0.2)', textAlign: 'left' }}>
+              <div style={{ textAlign: 'center', marginBottom: '0.8rem' }}>
+                <span style={{ fontSize: '1.8rem' }}>✨</span>
+                <p style={{ color: 'var(--text-main)', fontWeight: 600, fontSize: '1.05rem', marginTop: '0.2rem' }}>
+                  {mode === 'signin' ? 'Sign-In Link & Code Sent!' : 'Magic Link & Code Sent!'}
+                </p>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.86rem', marginTop: '0.2rem', lineHeight: 1.45 }}>
+                  Sent to <strong>{email}</strong>
+                </p>
+              </div>
+
+              {/* Direct 6-Digit OTP Form for PWA & Safari */}
+              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed rgba(226,114,91,0.3)' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem', fontFamily: 'Inter, sans-serif' }}>
+                    📱 Enter 6-Digit Code from Email
+                  </label>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.5rem', lineHeight: 1.35 }}>
+                    Best for iPhone &amp; App users — enter the 6-digit code without leaving this screen!
+                  </p>
+                  <input
+                    className="warm-input"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value)}
+                    placeholder="e.g. 123456"
+                    style={{ fontSize: '1.25rem', letterSpacing: '0.25rem', textAlign: 'center', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+
+                {error && <p style={{ color: '#c0392b', fontSize: '0.82rem', margin: 0 }}>{error}</p>}
+
+                <button
+                  type="submit"
+                  className="warm-btn"
+                  style={{ width: '100%', padding: '0.75rem' }}
+                  disabled={verifying || !otpCode.trim()}
+                >
+                  {verifying ? 'Verifying Code…' : '✓ Verify Code & Open Profile'}
+                </button>
+              </form>
+
+              <div style={{ marginTop: '1.2rem', paddingTop: '0.9rem', borderTop: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', lineHeight: 1.45, margin: 0 }}>
+                  Or tap the direct link in your email if viewing from your desktop browser.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setSent(false); setError(''); setOtpCode('') }}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, marginTop: '0.6rem' }}
+                >
+                  ← Re-enter email or try another address
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
