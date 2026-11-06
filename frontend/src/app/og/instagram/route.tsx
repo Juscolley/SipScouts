@@ -30,20 +30,47 @@ export async function GET(request: Request) {
   const logoUrl = `${origin}/sipscouts-logo.png`
   const mascotUrl = `${origin}/sipscouts-mascot.jpg`
 
+  const isCommunityWish =
+    drink.toLowerCase().startsWith('i wish') || (mode === 'trend' && drink.length > 45)
+
   const topPillText =
-    mode === 'trend'
+    isCommunityWish
+      ? '💡 COMMUNITY SCOUT WISH'
+      : mode === 'trend'
       ? '🔥 NEIGHBORHOOD CRAVING REPORT'
       : '🎯 HIDDEN GEM SIP SPOTLIGHT'
 
   const mainTitle =
     mode === 'trend'
-      ? `Trending in ${city}: ${drink}`
+      ? isCommunityWish
+        ? `"${drink}"`
+        : `Trending in ${city}: ${drink}`
       : `${drink} at ${venue}`
 
   const subText =
     mode === 'trend'
-      ? `${signal} · Scouted live on SipScouts.com`
+      ? isCommunityWish
+        ? `📍 Wish from ${city} · Scouted on SipScouts.com`
+        : `${signal} · Scouted live on SipScouts.com`
       : `📍 ${city}${dist ? ` · ${dist}` : ''} · Scouted by ${scout}`
+
+  const heroFontSize =
+    mainTitle.length > 90
+      ? isStory ? '34px' : '26px'
+      : mainTitle.length > 60
+      ? isStory ? '44px' : '34px'
+      : mainTitle.length > 35
+      ? isStory ? '52px' : '40px'
+      : isStory ? '64px' : '50px'
+
+  const boxFontSize =
+    mainTitle.length > 90
+      ? isStory ? '34px' : '26px'
+      : mainTitle.length > 60
+      ? isStory ? '44px' : '34px'
+      : mainTitle.length > 35
+      ? isStory ? '52px' : '38px'
+      : isStory ? '64px' : '48px'
 
   // Vibrant theme design configurations with BRIGHT, FULL-COLOR MASTERPIECES
   const themeConfig = {
@@ -381,9 +408,9 @@ export async function GET(request: Request) {
             >
               <div
                 style={{
-                  fontSize: isStory ? '64px' : '50px',
+                  fontSize: heroFontSize,
                   fontWeight: 800,
-                  lineHeight: 1.15,
+                  lineHeight: 1.18,
                   color: '#FFFFFF',
                   textShadow:
                     '0 3px 0 #000, 0 8px 25px rgba(0,0,0,1), 0 0 45px rgba(0,0,0,0.95)',
@@ -514,9 +541,9 @@ export async function GET(request: Request) {
 
             <div
               style={{
-                fontSize: isStory ? '64px' : '48px',
+                fontSize: boxFontSize,
                 fontWeight: 800,
-                lineHeight: 1.14,
+                lineHeight: 1.18,
                 color: '#FFFFFF',
                 textShadow: '0 2px 14px rgba(0,0,0,0.7)',
               }}

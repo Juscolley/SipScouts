@@ -408,9 +408,14 @@ export default function MerchantDashboard() {
                 })
                 const previewImageUrl = `/og/instagram?${previewParams.toString()}`
 
+                const isCommunityWish =
+                  activeDrink.toLowerCase().startsWith('i wish') || activeDrink.length > 50
+
                 const autoCaption =
                   igMode === 'venue'
                     ? `🎯 Hidden Gem Sip Spotlight: Craving ${activeDrink} near ${activeCity}? Our scouts just surfaced ${activeVenue}${cleanHandle ? ` (@${cleanHandle})` : ''}! ☕🍸\n\nTap the link in @SipScoutsApp bio or visit sipscouts.com to search any drink or ingredient within 55 miles — 100% free, no App Store download needed.\n\n📸 Follow @SipScoutsApp & tag a friend you'd bring here!\n\n#SipScouts #SpecialtyCoffee #MatchaLovers #CraftCocktails #LocalGems`
+                    : isCommunityWish
+                    ? `💡 Community Scout Wish: "${activeDrink}" in ${activeCity}!\n\nKnow a local café, tea house, or cocktail bar that crafts this or fits the vibe? Tag their @handle below so our community can scout them!\n\n🔍 Search any drink or ingredient at sipscouts.com (link in @SipScoutsApp bio).\n\n#SipScouts #CommunityWishlist #DrinkDiscovery #CoffeeCulture #Matcha #CraftCocktails`
                     : `🔥 Neighborhood Craving Report: "${activeDrink}" is trending in ${activeCity} (${activeSignal})!\n\nKnow a local café, tea house, or cocktail bar that crafts an unforgettable ${activeDrink}? Tag their @handle below so our community can scout them!\n\n🔍 Search any drink or ingredient at sipscouts.com (link in @SipScoutsApp bio).\n\n#SipScouts #DrinkDiscovery #CoffeeCulture #Matcha #CraftCocktails`
 
                 return (
@@ -572,19 +577,30 @@ export default function MerchantDashboard() {
                           ))}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: igDrink.length > 40 ? '1fr' : '1fr 1fr', gap: '0.6rem' }}>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                              Featured Drink / Craving
+                              Featured Drink / Craving / Community Wish
                             </label>
-                            <input
-                              className="warm-input"
-                              type="text"
-                              value={igDrink}
-                              onChange={e => setIgDrink(e.target.value)}
-                              placeholder={activeDrink}
-                              style={{ padding: '0.5rem 0.75rem', fontSize: '0.84rem' }}
-                            />
+                            {igDrink.length > 40 ? (
+                              <textarea
+                                className="warm-input"
+                                rows={2}
+                                value={igDrink}
+                                onChange={e => setIgDrink(e.target.value)}
+                                placeholder={activeDrink}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.84rem', resize: 'vertical', boxSizing: 'border-box' }}
+                              />
+                            ) : (
+                              <input
+                                className="warm-input"
+                                type="text"
+                                value={igDrink}
+                                onChange={e => setIgDrink(e.target.value)}
+                                placeholder={activeDrink}
+                                style={{ width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.84rem', boxSizing: 'border-box' }}
+                              />
+                            )}
                           </div>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
@@ -885,7 +901,7 @@ export default function MerchantDashboard() {
                                 type="button"
                                 onClick={() => {
                                   setIgMode('trend')
-                                  setIgDrink(f.craving_or_feature_wish.slice(0, 45))
+                                  setIgDrink(f.craving_or_feature_wish.trim())
                                   if (f.city_or_zip) setIgCity(f.city_or_zip)
                                   window.scrollTo({ top: 350, behavior: 'smooth' })
                                 }}
