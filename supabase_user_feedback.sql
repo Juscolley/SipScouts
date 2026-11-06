@@ -29,6 +29,12 @@ create policy "user_feedback_select_all"
   on public.user_feedback for select
   using (true);
 
+-- 3. Allow deleting feedback (for cleaning up test records in Merchant Dashboard)
+drop policy if exists "user_feedback_delete_all" on public.user_feedback;
+create policy "user_feedback_delete_all"
+  on public.user_feedback for delete
+  using (true);
+
 -- Indexes for performance
 create index if not exists idx_user_feedback_submitted_at on public.user_feedback(submitted_at desc);
 create index if not exists idx_user_feedback_city_or_zip on public.user_feedback(city_or_zip);

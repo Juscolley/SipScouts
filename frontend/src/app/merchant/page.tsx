@@ -297,6 +297,26 @@ export default function MerchantDashboard() {
     { label: 'Community Wishes', value: filteredFeedback.length },
   ]
 
+  async function handleDeleteFeedback(id: string) {
+    if (!window.confirm('Delete this wish from your database so it is not counted in your data?')) return
+    const supabase = createClient()
+    try {
+      await supabase.from('user_feedback').delete().eq('id', id)
+    } catch {
+      // Ignore
+    }
+    setFeedbackRows(prev => prev.filter(f => f.id !== id))
+    try {
+      const raw = localStorage.getItem('sipscouts_user_feedback_v1')
+      if (raw) {
+        const items = JSON.parse(raw).filter((item: any) => item.id !== id)
+        localStorage.setItem('sipscouts_user_feedback_v1', JSON.stringify(items))
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
       <div className="hero-bg" />
@@ -897,20 +917,31 @@ export default function MerchantDashboard() {
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIgMode('trend')
-                                  setIgDrink(f.craving_or_feature_wish.trim())
-                                  if (f.city_or_zip) setIgCity(f.city_or_zip)
-                                  window.scrollTo({ top: 350, behavior: 'smooth' })
-                                }}
-                                className="warm-btn-ghost"
-                                style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                                title="Turn this user wish into an Instagram Craving Spotlight graphic"
-                              >
-                                📸 Make IG Spotlight
-                              </button>
+                              <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIgMode('trend')
+                                    setIgDrink(f.craving_or_feature_wish.trim())
+                                    if (f.city_or_zip) setIgCity(f.city_or_zip)
+                                    window.scrollTo({ top: 350, behavior: 'smooth' })
+                                  }}
+                                  className="warm-btn-ghost"
+                                  style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                  title="Turn this user wish into an Instagram Craving Spotlight graphic"
+                                >
+                                  📸 Make IG Spotlight
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteFeedback(f.id)}
+                                  className="warm-btn-ghost"
+                                  style={{ padding: '0.3rem 0.55rem', fontSize: '0.74rem', borderRadius: 8, cursor: 'pointer', color: '#c0392b', borderColor: 'rgba(192,57,43,0.3)' }}
+                                  title="Delete this test or unwanted feedback so it is not counted in your data"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
