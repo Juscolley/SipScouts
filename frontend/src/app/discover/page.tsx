@@ -40,6 +40,8 @@ const SEARCH_STORAGE_KEY = 'sipscouts_last_search_v1'
 const TRENDING_CRAVINGS: Array<{ label: string; drink: string; ingredient: string }> = [
   { label: '🍵 Pistachio Matcha', drink: 'Matcha Latte', ingredient: 'Pistachio' },
   { label: '🍸 Espresso Martini', drink: 'Espresso Martini', ingredient: '' },
+  { label: '🍹 Phony Negroni', drink: 'Phony Negroni', ingredient: 'Zero-Proof' },
+  { label: '🌿 Seedlip Botanical', drink: 'Mocktail', ingredient: 'Seedlip' },
   { label: '☕ Cardamom Latte', drink: 'Latte', ingredient: 'Cardamom' },
   { label: '🍋 Yuzu Spritz', drink: 'Spritz', ingredient: 'Yuzu' },
   { label: '🥃 Mezcal Negroni', drink: 'Negroni', ingredient: 'Mezcal' },
@@ -536,11 +538,11 @@ export default function DiscoverPage() {
         <form onSubmit={handleSearch} style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
-            <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Matcha, Negroni…" />
+            <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Matcha, Phony Negroni…" />
           </div>
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
-            <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Yuzu, Mezcal…" />
+            <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Yuzu, Seedlip, Mezcal…" />
           </div>
           <div style={{ flex: '1 1 170px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
@@ -574,6 +576,49 @@ export default function DiscoverPage() {
         >
           <InstallAppButton />
           <NotificationBell />
+        </div>
+
+        {/* Core Craving Categories: Coffee, Tea, Cocktails, Zero-Proof */}
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 0.65rem', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {[
+              { label: '☕ Specialty Coffee', drink: 'Specialty Coffee', ingredient: '' },
+              { label: '🍵 Matcha & Tea', drink: 'Matcha', ingredient: '' },
+              { label: '🍸 Craft Cocktails', drink: 'Cocktail', ingredient: '' },
+              { label: '🍹 Zero-Proof / Mocktails', drink: 'Mocktail', ingredient: 'Zero-Proof' },
+            ].map(cat => (
+              <button
+                key={cat.label}
+                type="button"
+                onClick={() => {
+                  setDrink(cat.drink)
+                  setIngredient(cat.ingredient)
+                  executeSearch({
+                    drinkVal: cat.drink,
+                    ingredientVal: cat.ingredient,
+                    locationVal: locationInput.trim() || memberProfile?.zip_code?.trim() || '',
+                  })
+                }}
+                style={{
+                  minBlockSize: 36,
+                  padding: '0.4rem 0.95rem',
+                  borderRadius: 99,
+                  border: drink === cat.drink ? '1.5px solid #E2725B' : '1px solid rgba(255, 255, 255, 0.45)',
+                  background: drink === cat.drink ? 'rgba(226, 114, 91, 0.95)' : 'rgba(255, 255, 255, 0.92)',
+                  backdropFilter: 'blur(8px)',
+                  color: drink === cat.drink ? '#FFFFFF' : '#2C1810',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 1-Tap Trending Cravings Bar (Converts IG Bio Traffic into Immediate Logged Searches) */}
@@ -1377,7 +1422,7 @@ export default function DiscoverPage() {
 
       {/* Modal shown when a user taps "📸 IG Story Card" on any venue card */}
       {storyModalVenue && (() => {
-        const activeCraving = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'Specialty Coffee, Matcha & Cocktails'
+        const activeCraving = [drink.trim(), ingredient.trim()].filter(Boolean).join(' + ') || 'Specialty Coffee, Matcha, Cocktails & Zero-Proof'
         const cityVal = locationInput.trim() || geo.cityLabel || 'Local Gem'
         const venueIgHandle = extractIgHandle(storyModalVenue.instagram_url)
         const distVal = storyModalVenue.distanceKm !== undefined ? `${(storyModalVenue.distanceKm * 0.621371).toFixed(1)} mi away` : ''

@@ -645,7 +645,7 @@ export async function GET(request: Request) {
               textShadow: '0 2px 8px rgba(0,0,0,0.8)',
             }}
           >
-            Specialty Coffee · Matcha &amp; Tea · Craft Cocktails Within 55 Miles
+            Specialty Coffee · Matcha &amp; Tea · Craft Cocktails · Zero-Proof
           </span>
         </div>
       </div>

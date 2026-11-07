@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://sipscouts.com"),
   title: "SipScouts — Find Your Next Perfect Sip",
-  description: "Discover nearby cafés, tea houses, and cocktail bars serving your favorite drinks and ingredients.",
+  description: "Discover nearby cafés, tea houses, cocktail bars, and zero-proof spots serving your favorite drinks and ingredients.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "SipScouts — Find Your Next Perfect Sip",
-    description: "Coffee, tea, or craft cocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
+    description: "Coffee, tea, craft cocktails, or zero-proof mocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
     url: "https://sipscouts.com",
     siteName: "SipScouts",
     images: [
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
         url: "/sipscouts-logo.jpg",
         width: 1024,
         height: 1024,
-        alt: "SipScouts — Coffee, Tea & Craft Cocktail Discovery",
+        alt: "SipScouts — Coffee, Tea, Craft Cocktails & Zero-Proof Discovery",
       },
     ],
     type: "website",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "SipScouts — Find Your Next Perfect Sip",
-    description: "Coffee, tea, or craft cocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
+    description: "Coffee, tea, craft cocktails, or zero-proof mocktails — search by drink or ingredient and discover hidden gems sorted by distance.",
     images: ["/sipscouts-logo.jpg"],
   },
 };

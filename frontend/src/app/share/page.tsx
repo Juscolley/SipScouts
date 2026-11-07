@@ -10,7 +10,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const badge = (typeof params.badge === 'string' ? params.badge : '') || 'Founding Sip Scout'
   const scout = (typeof params.scout === 'string' ? params.scout : '') || 'Your Friend'
   const venue = typeof params.venue === 'string' ? params.venue : ''
-  const drink = (typeof params.drink === 'string' ? params.drink : '') || 'Specialty Coffee, Matcha & Cocktails'
+  const drink = (typeof params.drink === 'string' ? params.drink : '') || 'Specialty Coffee, Matcha, Cocktails & Zero-Proof'
   const city = typeof params.city === 'string' ? params.city : ''
 
   const ogParams = new URLSearchParams()
@@ -54,7 +54,7 @@ export default async function SharePage({ searchParams }: Props) {
   const scout = (typeof params.scout === 'string' ? params.scout : '') || 'A Fellow Scout'
   const venue = typeof params.venue === 'string' ? params.venue : ''
   const address = typeof params.address === 'string' ? params.address : ''
-  const drink = (typeof params.drink === 'string' ? params.drink : '') || 'Specialty Coffee, Matcha & Craft Cocktails'
+  const drink = (typeof params.drink === 'string' ? params.drink : '') || 'Specialty Coffee, Matcha, Cocktails & Zero-Proof'
   const city = typeof params.city === 'string' ? params.city : ''
 
   return (

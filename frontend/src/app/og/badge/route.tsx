@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const badge = searchParams.get('badge') || 'Founding Sip Scout'
   const scout = searchParams.get('scout') || 'A Fellow Scout'
   const venue = searchParams.get('venue') || ''
-  const drink = searchParams.get('drink') || 'Specialty Coffee, Matcha & Craft Cocktails'
+  const drink = searchParams.get('drink') || 'Specialty Coffee, Matcha, Cocktails & Zero-Proof'
   const city = searchParams.get('city') || ''
   const logoUrl = `${origin}/sipscouts-logo.png`
 

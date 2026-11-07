@@ -90,7 +90,7 @@ export async function GET(request: Request) {
           venue_handle: handle ? `@${handle}` : undefined,
           square_image_url: `${origin}/og/instagram?${qSquare.toString()}`,
           story_image_url: `${origin}/og/instagram?${qStory.toString()}`,
-          caption: `🎯 Hidden Gem Sip Spotlight: Craving ${drink} near ${city}? Our scouts just surfaced ${venue}${handle ? ` (@${handle})` : ''}! ☕🍸\n\nTap the link in @SipScoutsApp bio or visit sipscouts.com to search any drink or ingredient within 55 miles — 100% free, no App Store download needed.\n\n📸 Follow @SipScoutsApp & tag us in your next favorite sip!\n\n#SipScouts #CoffeeLovers #MatchaLovers #CraftCocktails #HiddenGems`,
+          caption: `🎯 Hidden Gem Sip Spotlight: Craving ${drink} near ${city}? Our scouts just surfaced ${venue}${handle ? ` (@${handle})` : ''}! ☕🍸🍹\n\nTap the link in @SipScoutsApp bio or visit sipscouts.com to search any drink or ingredient within 55 miles — 100% free, no App Store download needed.\n\n📸 Follow @SipScoutsApp & tag us in your next favorite sip!\n\n#SipScouts #CoffeeLovers #MatchaLovers #CraftCocktails #ZeroProof #Mocktails #HiddenGems`,
           deep_link_url: deepLink,
         })
       }
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
           city,
           square_image_url: `${origin}/og/instagram?${qSquare.toString()}`,
           story_image_url: `${origin}/og/instagram?${qStory.toString()}`,
-          caption: `🔥 Neighborhood Craving Report: "${drink}" is trending right now in ${city} (${signal})!\n\nKnow a local café, tea house, or cocktail bar that makes an unforgettable ${drink}? Tag their @handle below so our community can scout them!\n\n🔍 Search any drink or ingredient at sipscouts.com (link in @SipScoutsApp bio).\n\n#SipScouts #DrinkDiscovery #SpecialtyCoffee #Matcha #CraftCocktails`,
+          caption: `🔥 Neighborhood Craving Report: "${drink}" is trending right now in ${city} (${signal})!\n\nKnow a local café, tea house, cocktail bar, or zero-proof lounge that makes an unforgettable ${drink}? Tag their @handle below so our community can scout them!\n\n🔍 Search any drink or ingredient at sipscouts.com (link in @SipScoutsApp bio).\n\n#SipScouts #DrinkDiscovery #SpecialtyCoffee #Matcha #CraftCocktails #Mocktails #ZeroProof`,
           deep_link_url: deepLink,
         })
       }
@@ -163,7 +163,7 @@ export async function GET(request: Request) {
       city: defaultCity,
       square_image_url: `${origin}/og/instagram?${qSquare.toString()}`,
       story_image_url: `${origin}/og/instagram?${qStory.toString()}`,
-      caption: `🥂 Craving something specific? Search by drink OR ingredient on SipScouts.com and discover the closest Exact Match & Potential Match cafés, tea houses, and cocktail bars within 55 miles!\n\nFollow @SipScoutsApp and claim your free Scout Badge at sipscouts.com 🏅\n\n#SipScouts #SpecialtyCoffee #CeremonialMatcha #CraftCocktails #LocalGems`,
+      caption: `🥂 Craving something specific? Search by drink OR ingredient on SipScouts.com and discover the closest Exact Match & Potential Match cafés, tea houses, cocktail bars, and zero-proof spots within 55 miles!\n\nFollow @SipScoutsApp and claim your free Scout Badge at sipscouts.com 🏅\n\n#SipScouts #SpecialtyCoffee #CeremonialMatcha #CraftCocktails #ZeroProof #Mocktails #MindfulMixologist #LocalGems`,
       deep_link_url: `${origin}/discover`,
     })
   }

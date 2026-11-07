@@ -131,6 +131,9 @@ export default function ProfilePage() {
   const earnedBadgeName =
     bookmarks.length >= 3
       ? 'Neighborhood Tastemaker'
+      : profile.favorite_drinks.some(d => /mocktail|zero-proof|zero proof|non-alcoholic|na cocktail|seedlip|ghia|botanical|shrub|adaptogen|phony negroni|kombucha/i.test(d)) ||
+        profile.favorite_ingredients.some(i => /mocktail|zero-proof|zero proof|non-alcoholic|seedlip|ghia|botanical|shrub|adaptogen/i.test(i))
+      ? 'Mindful Mixologist'
       : profile.favorite_drinks.some(d => /matcha|tea|chai|hojicha/i.test(d)) ||
         profile.favorite_ingredients.some(i => /matcha|tea|chai|hojicha/i.test(i))
       ? 'Matcha Maven'
@@ -144,7 +147,7 @@ export default function ProfilePage() {
 
   const sipDnaSummary =
     [...profile.favorite_drinks.slice(0, 3), ...profile.favorite_ingredients.slice(0, 2)].join(' · ') ||
-    'Specialty Coffee · Ceremonial Matcha · Craft Cocktails'
+    'Specialty Coffee · Ceremonial Matcha · Craft Cocktails · Zero-Proof'
 
   async function handleShareBadge() {
     const scoutName = profile.name.trim() || (email ? email.split('@')[0] : 'A Fellow Scout')
@@ -894,18 +897,68 @@ export default function ProfilePage() {
                       onChange={v => setProfile({ ...profile, favorite_drinks: v })}
                       pendingInput={pendingDrinkInput}
                       onPendingInputChange={setPendingDrinkInput}
-                      placeholder="e.g. Oat Latte, Matcha, Saffron Martini…"
+                      placeholder="e.g. Phony Negroni, Oat Latte, Matcha, Espresso Martini…"
                       maxItems={5}
                     />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '-0.5rem', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Popular:</span>
+                      {['Phony Negroni', 'Espresso Martini', 'Matcha Latte', 'Cortado', 'Yuzu Spritz'].map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => {
+                            if (!profile.favorite_drinks.includes(d) && profile.favorite_drinks.length < 5) {
+                              setProfile(prev => ({ ...prev, favorite_drinks: [...prev.favorite_drinks, d] }))
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: 99,
+                            border: '1px dashed rgba(226, 114, 91, 0.45)',
+                            background: 'rgba(255, 255, 255, 0.7)',
+                            color: 'var(--text-main)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          + {d}
+                        </button>
+                      ))}
+                    </div>
                     <TagInput
                       label="Favorite Ingredients (Up to 5)"
                       values={profile.favorite_ingredients}
                       onChange={v => setProfile({ ...profile, favorite_ingredients: v })}
                       pendingInput={pendingIngredientInput}
                       onPendingInputChange={setPendingIngredientInput}
-                      placeholder="e.g. Cardamom, Yuzu, Pistachio, Lavender…"
+                      placeholder="e.g. Seedlip, Cardamom, Yuzu, Pistachio, Lavender…"
                       maxItems={5}
                     />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '-0.5rem', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Popular:</span>
+                      {['Seedlip', 'Ghia', 'Cardamom', 'Pistachio', 'Mezcal', 'Oat Milk'].map(ing => (
+                        <button
+                          key={ing}
+                          type="button"
+                          onClick={() => {
+                            if (!profile.favorite_ingredients.includes(ing) && profile.favorite_ingredients.length < 5) {
+                              setProfile(prev => ({ ...prev, favorite_ingredients: [...prev.favorite_ingredients, ing] }))
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: 99,
+                            border: '1px dashed rgba(226, 114, 91, 0.45)',
+                            background: 'rgba(255, 255, 255, 0.7)',
+                            color: 'var(--text-main)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          + {ing}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
