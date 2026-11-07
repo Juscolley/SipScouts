@@ -38,24 +38,60 @@ export default function NotificationBell() {
   async function subscribe() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     setStatus('loading')
+
+    // Timeout safety net: never let button hang indefinitely
+    const safetyTimer = setTimeout(() => {
+      setStatus(prev => prev === 'loading' ? 'idle' : prev)
+    }, 6000)
+
     try {
       const permission = await Notification.requestPermission()
-      if (permission !== 'granted') { setStatus('denied'); return }
-      const reg = await navigator.serviceWorker.ready
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) })
+      if (permission !== 'granted') {
+        clearTimeout(safetyTimer)
+        setStatus('denied')
+        return
+      }
+
+      // Check if registration exists or register service worker
+      let reg: ServiceWorkerRegistration | undefined
+      try {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 3000)),
+        ])
+      } catch {
+        reg = await navigator.serviceWorker.getRegistration()
+      }
+
+      if (!reg) {
+        clearTimeout(safetyTimer)
+        setStatus('idle')
+        return
+      }
+
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BK6bdNzMN01bNQzyLFurcxJq7JNgrByK4-tkQhD55W5jDktVwpDkxjHYHl4475ubWSsPw7VRt0huoK1ATXMw1Zk'
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+
       const key = sub.getKey('p256dh')
       const auth = sub.getKey('auth')
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
+
       await supabase.from('push_subscriptions').upsert({
         user_id: user?.id ?? null,
         endpoint: sub.endpoint,
         p256dh: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : '',
         auth_key: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
       }, { onConflict: 'endpoint' })
+
+      clearTimeout(safetyTimer)
       setStatus('subscribed')
-    } catch {
+    } catch (e) {
+      clearTimeout(safetyTimer)
+      console.warn('Subscription error:', e)
       setStatus('idle')
     }
   }
@@ -63,18 +99,37 @@ export default function NotificationBell() {
   async function unsubscribe() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     setStatus('loading')
+
+    const safetyTimer = setTimeout(() => {
+      setStatus(prev => prev === 'loading' ? 'idle' : prev)
+    }, 4000)
+
     try {
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.getSubscription()
-      if (sub) {
-        const endpoint = sub.endpoint
-        await sub.unsubscribe()
-        const supabase = createClient()
-        await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+      let reg: ServiceWorkerRegistration | undefined
+      try {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 2500)),
+        ])
+      } catch {
+        reg = await navigator.serviceWorker.getRegistration()
       }
+
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) {
+          const endpoint = sub.endpoint
+          await sub.unsubscribe()
+          const supabase = createClient()
+          await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+        }
+      }
+      clearTimeout(safetyTimer)
       setStatus('idle')
-    } catch {
-      setStatus('subscribed')
+    } catch (e) {
+      clearTimeout(safetyTimer)
+      console.warn('Unsubscribe error:', e)
+      setStatus('idle')
     }
   }
 

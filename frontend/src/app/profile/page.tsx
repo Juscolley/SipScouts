@@ -547,6 +547,83 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* VIP BADGE & TASTEMAKER REFERRAL TIERS */}
+              <div
+                className="glass"
+                style={{
+                  padding: '1.4rem 1.75rem',
+                  borderRadius: 20,
+                  border: '1.5px solid rgba(226, 114, 91, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
+                      🌟 VIP Scout &amp; Tastemaker Tiers
+                    </h3>
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.2rem', lineHeight: 1.45 }}>
+                      Invite friends to SipScouts with your personal link to unlock lifetime VIP status &amp; secret perks:
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleShareBadge}
+                    className="warm-btn-ghost"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem 0.95rem', borderRadius: 99, fontWeight: 700 }}
+                  >
+                    🔗 Copy My Invite Link
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.85rem', marginTop: '1rem' }}>
+                  {/* Tier 1 */}
+                  <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(226, 114, 91, 0.06)', border: '1px solid rgba(226, 114, 91, 0.2)' }}>
+                    <div style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>🥉</div>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                      Local Pioneer
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.1rem' }}>
+                      Invite 3 Friends
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0 }}>
+                      Unlocks custom Bronze Pioneer badge on your profile and search cards.
+                    </p>
+                  </div>
+
+                  {/* Tier 2: VIP */}
+                  <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(255, 215, 0, 0.12)', border: '1.5px solid rgba(218, 165, 32, 0.6)', position: 'relative' }}>
+                    <span style={{ position: 'absolute', top: 8, right: 8, background: '#DAA520', color: '#fff', fontSize: '0.65rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: 99 }}>
+                      POPULAR
+                    </span>
+                    <div style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>🥇</div>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                      Gold Scout VIP
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#B8860B', fontWeight: 700, marginTop: '0.1rem' }}>
+                      Invite 5 Friends (or $1.99/mo)
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-main)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0, fontWeight: 500 }}>
+                      Unlimited craving alerts, secret menu notes &amp; Gold Aardvark badge!
+                    </p>
+                  </div>
+
+                  {/* Tier 3: Influencer / Tastemaker */}
+                  <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(106, 27, 154, 0.06)', border: '1px solid rgba(106, 27, 154, 0.25)' }}>
+                    <div style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>👑</div>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                      Founding Tastemaker
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6A1B9A', fontWeight: 700, marginTop: '0.1rem' }}>
+                      Invite 10 Friends
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0 }}>
+                      Top community influencer rank, permanent VIP pass &amp; priority drink submissions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* RETURNING MEMBER HUB VIEW (Shown automatically when profile is already set up and not actively editing) */}
               {hasExistingProfile && !isEditing && (
                 <>
