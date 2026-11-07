@@ -1009,59 +1009,64 @@ export default function DiscoverPage() {
                     </div>
 
                     {/* Tactile Clickable Venue Action Buttons Row (Call, Instagram, Menu/Site) */}
-                    {(v.phone || v.instagram_url || v.website) && (
-                      <div
-                        style={{
-                          marginTop: '0.6rem',
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          alignItems: 'center',
-                          gap: '0.45rem',
-                        }}
-                      >
-                        {v.phone && (
+                    <div
+                      style={{
+                        marginTop: '0.6rem',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                      }}
+                    >
+                      {v.phone && (
+                        <a
+                          href={`tel:${v.phone}`}
+                          onClick={() =>
+                            trackVenueAction({
+                              venue_name: v.name,
+                              venue_address: v.address,
+                              venue_type: v.type,
+                              action_type: 'call',
+                              searched_drink: drink.trim(),
+                              searched_ingredient: ingredient.trim(),
+                              city: geo.cityLabel || locationInput.trim(),
+                              zip_code: locationInput.trim(),
+                              latitude: v.lat,
+                              longitude: v.lng,
+                              user_id: userId,
+                            })
+                          }
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            minBlockSize: 34,
+                            padding: '0.3rem 0.7rem',
+                            borderRadius: 10,
+                            background: '#ffffff',
+                            border: '1.5px solid rgba(74, 46, 32, 0.28)',
+                            boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
+                            fontSize: '0.76rem',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 700,
+                            color: 'var(--text-main)',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                          }}
+                          title={`Call ${v.phone}`}
+                        >
+                          📞 Call ↗
+                        </a>
+                      )}
+
+                      {/* Always-Visible Instagram Button (Opens profile or Instagram keyword search for venue) */}
+                      {(() => {
+                        const igHref =
+                          v.instagram_url ||
+                          `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(v.name)}`
+                        return (
                           <a
-                            href={`tel:${v.phone}`}
-                            onClick={() =>
-                              trackVenueAction({
-                                venue_name: v.name,
-                                venue_address: v.address,
-                                venue_type: v.type,
-                                action_type: 'call',
-                                searched_drink: drink.trim(),
-                                searched_ingredient: ingredient.trim(),
-                                city: geo.cityLabel || locationInput.trim(),
-                                zip_code: locationInput.trim(),
-                                latitude: v.lat,
-                                longitude: v.lng,
-                                user_id: userId,
-                              })
-                            }
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              minBlockSize: 34,
-                              padding: '0.3rem 0.7rem',
-                              borderRadius: 10,
-                              background: '#ffffff',
-                              border: '1.5px solid rgba(74, 46, 32, 0.28)',
-                              boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                              fontSize: '0.76rem',
-                              fontFamily: 'Inter, sans-serif',
-                              fontWeight: 700,
-                              color: 'var(--text-main)',
-                              textDecoration: 'none',
-                              cursor: 'pointer',
-                            }}
-                            title={`Call ${v.phone}`}
-                          >
-                            📞 Call ↗
-                          </a>
-                        )}
-                        {v.instagram_url && (
-                          <a
-                            href={v.instagram_url}
+                            href={igHref}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() =>
@@ -1096,53 +1101,55 @@ export default function DiscoverPage() {
                               textDecoration: 'none',
                               cursor: 'pointer',
                             }}
+                            title={`View ${v.name} on Instagram`}
                           >
                             📸 Instagram ↗
                           </a>
-                        )}
-                        {v.website && (
-                          <a
-                            href={v.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() =>
-                              trackVenueAction({
-                                venue_name: v.name,
-                                venue_address: v.address,
-                                venue_type: v.type,
-                                action_type: 'website',
-                                searched_drink: drink.trim(),
-                                searched_ingredient: ingredient.trim(),
-                                city: geo.cityLabel || locationInput.trim(),
-                                zip_code: locationInput.trim(),
-                                latitude: v.lat,
-                                longitude: v.lng,
-                                user_id: userId,
-                              })
-                            }
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              minBlockSize: 34,
-                              padding: '0.3rem 0.7rem',
-                              borderRadius: 10,
-                              background: '#ffffff',
-                              border: '1.5px solid rgba(74, 46, 32, 0.28)',
-                              boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                              fontSize: '0.76rem',
-                              fontFamily: 'Inter, sans-serif',
-                              fontWeight: 700,
-                              color: 'var(--text-main)',
-                              textDecoration: 'none',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            🌐 Menu / Site ↗
-                          </a>
-                        )}
-                      </div>
-                    )}
+                        )
+                      })()}
+
+                      {v.website && (
+                        <a
+                          href={v.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            trackVenueAction({
+                              venue_name: v.name,
+                              venue_address: v.address,
+                              venue_type: v.type,
+                              action_type: 'website',
+                              searched_drink: drink.trim(),
+                              searched_ingredient: ingredient.trim(),
+                              city: geo.cityLabel || locationInput.trim(),
+                              zip_code: locationInput.trim(),
+                              latitude: v.lat,
+                              longitude: v.lng,
+                              user_id: userId,
+                            })
+                          }
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            minBlockSize: 34,
+                            padding: '0.3rem 0.7rem',
+                            borderRadius: 10,
+                            background: '#ffffff',
+                            border: '1.5px solid rgba(74, 46, 32, 0.28)',
+                            boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
+                            fontSize: '0.76rem',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 700,
+                            color: 'var(--text-main)',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🌐 Menu / Site ↗
+                        </a>
+                      )}
+                    </div>
 
                     {v.tags.filter(t => t !== 'Exact Match' && t !== 'Potential Match').length > 0 && (
                       <div style={{ marginTop: '0.55rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
