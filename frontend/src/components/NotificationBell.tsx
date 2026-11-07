@@ -14,10 +14,25 @@ export default function NotificationBell() {
   const [status, setStatus] = useState<'idle' | 'subscribed' | 'denied' | 'loading'>('idle')
 
   useEffect(() => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') setStatus('subscribed')
-      else if (Notification.permission === 'denied') setStatus('denied')
+    async function checkSubscription() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+      if ('Notification' in window && Notification.permission === 'denied') {
+        setStatus('denied')
+        return
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) {
+          setStatus('subscribed')
+        } else {
+          setStatus('idle')
+        }
+      } catch {
+        setStatus('idle')
+      }
     }
+    checkSubscription()
   }, [])
 
   async function subscribe() {
@@ -45,14 +60,81 @@ export default function NotificationBell() {
     }
   }
 
-  if (status === 'subscribed') return (
-    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', fontWeight: 600, color: '#1a7a42', background: 'rgba(255, 255, 255, 0.92)', border: '1.5px solid #2ea043', borderRadius: 99, padding: '0.65rem 1.25rem', boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>🔔 Notifications On</span>
-  )
-  if (status === 'denied') return (
-    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', background: 'rgba(255, 255, 255, 0.85)', borderRadius: 99, padding: '0.65rem 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>🔕 Alerts Blocked</span>
-  )
+  async function unsubscribe() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    setStatus('loading')
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        const endpoint = sub.endpoint
+        await sub.unsubscribe()
+        const supabase = createClient()
+        await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+      }
+      setStatus('idle')
+    } catch {
+      setStatus('subscribed')
+    }
+  }
+
+  if (status === 'subscribed') {
+    return (
+      <button
+        onClick={unsubscribe}
+        className="warm-btn-ghost"
+        title="Click to turn off push notifications"
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          color: '#1a7a42',
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1.5px solid #2ea043',
+          borderRadius: 99,
+          padding: '0.65rem 1.25rem',
+          boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <span style={{ fontSize: '1rem' }}>🔔</span>
+        <span>Alerts ON</span>
+        <span style={{ fontSize: '0.72rem', color: '#1a7a42', opacity: 0.75, marginLeft: '0.15rem' }}>(Tap to Mute)</span>
+      </button>
+    )
+  }
+
+  if (status === 'denied') {
+    return (
+      <span
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '0.9rem',
+          fontWeight: 500,
+          color: 'var(--text-muted)',
+          background: 'rgba(255, 255, 255, 0.85)',
+          borderRadius: 99,
+          padding: '0.65rem 1.25rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+        }}
+        title="Notifications are blocked in your browser settings"
+      >
+        🔕 Alerts Blocked
+      </span>
+    )
+  }
+
   return (
-    <button onClick={subscribe} disabled={status === 'loading'} className="warm-btn-ghost"
+    <button
+      onClick={subscribe}
+      disabled={status === 'loading'}
+      className="warm-btn-ghost"
       style={{
         fontSize: '0.9rem',
         fontWeight: 600,
@@ -67,8 +149,9 @@ export default function NotificationBell() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: '0.4rem',
-      }}>
-      {status === 'loading' ? '⏳ Enabling…' : '🔔 Notify Me'}
+      }}
+    >
+      {status === 'loading' ? '⏳ Updating…' : '🔔 Notify Me'}
     </button>
   )
 }
