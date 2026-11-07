@@ -488,7 +488,7 @@ export default function DiscoverPage() {
             Find your next perfect sip
           </h1>
           <p className="hero-sub">
-            Coffee, tea, or craft cocktails — search by drink or ingredient and we&apos;ll surface hidden gems sorted by distance.
+            Coffee, tea, craft cocktails, or zero-proof mocktails — search by drink or ingredient and we&apos;ll surface hidden gems sorted by distance.
           </p>
           {geo.source === 'gps' && (
             <p className="hero-note">📍 Currently using your exact GPS location</p>
