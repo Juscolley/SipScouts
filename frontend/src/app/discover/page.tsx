@@ -75,6 +75,11 @@ export default function DiscoverPage() {
   const [copiedVenueId, setCopiedVenueId] = useState<string | null>(null)
   const [deepLinkCopied, setDeepLinkCopied] = useState(false)
   const [storyModalVenue, setStoryModalVenue] = useState<Venue | null>(null)
+  const [storyTheme, setStoryTheme] = useState<
+    'starry_hero' | 'matcha_hero' | 'espresso_hero' | 'terracotta_hero' | 'neon' | 'matcha' | 'espresso' | 'terracotta'
+  >('starry_hero')
+  const [storyFormat, setStoryFormat] = useState<'story' | 'square'>('story')
+  const [isSharingImage, setIsSharingImage] = useState(false)
   const [storyCaptionCopied, setStoryCaptionCopied] = useState(false)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [feedbackDefaultWish, setFeedbackDefaultWish] = useState('')
@@ -1447,16 +1452,42 @@ export default function DiscoverPage() {
 
         const storyParams = new URLSearchParams({
           mode: 'venue',
-          format: 'story',
+          format: storyFormat,
           venue: storyModalVenue.name,
           drink: activeCraving,
           city: cityVal,
           scout: scoutName,
+          theme: storyTheme,
           ...(venueIgHandle ? { handle: venueIgHandle } : {}),
           ...(distVal ? { dist: distVal } : {}),
         })
         const storyImageUrl = `/og/instagram?${storyParams.toString()}`
         const captionText = `🎯 Just scouted ${activeCraving} at ${storyModalVenue.name}${venueIgHandle ? ` (@${venueIgHandle})` : ''} on @SipScoutsApp! ☕🍸 Search any drink or ingredient near you at sipscouts.com #SipScouts`
+
+        const handleShareOrSave = async () => {
+          setIsSharingImage(true)
+          try {
+            const res = await fetch(storyImageUrl)
+            const blob = await res.blob()
+            const fileName = `sipscouts-${storyFormat}-${storyModalVenue.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`
+            const file = new File([blob], fileName, { type: 'image/png' })
+            if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `SipScouts — ${storyModalVenue.name}`,
+                text: captionText,
+              })
+            } else {
+              window.open(storyImageUrl, '_blank')
+            }
+          } catch (err) {
+            if ((err as Error)?.name !== 'AbortError') {
+              window.open(storyImageUrl, '_blank')
+            }
+          } finally {
+            setIsSharingImage(false)
+          }
+        }
 
         return (
           <div
@@ -1468,12 +1499,12 @@ export default function DiscoverPage() {
               position: 'fixed',
               inset: 0,
               zIndex: 9999,
-              background: 'rgba(28, 12, 6, 0.72)',
+              background: 'rgba(28, 12, 6, 0.76)',
               backdropFilter: 'blur(8px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '1rem',
+              padding: '0.75rem',
               overflowY: 'auto',
             }}
           >
@@ -1481,28 +1512,154 @@ export default function DiscoverPage() {
               onClick={e => e.stopPropagation()}
               className="glass"
               style={{
-                maxWidth: 420,
+                maxWidth: 440,
                 width: '100%',
-                padding: '1.35rem',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                padding: '1.25rem 1.1rem',
                 background: '#fcf6f0',
                 borderRadius: 24,
                 color: 'var(--text-main)',
                 textAlign: 'center',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
               }}
             >
-              <h3 id="ig-story-modal-title" style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', margin: '0 0 0.35rem' }}>
-                📸 Ready-to-Post IG Story Card
+              <h3 id="ig-story-modal-title" style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', margin: '0 0 0.25rem' }}>
+                📸 Instagram Card Creator
               </h3>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', margin: '0 0 0.85rem', lineHeight: 1.45 }}>
-                Tag <strong>{venueIgHandle ? `@${venueIgHandle} + ` : ''}@SipScoutsApp</strong> in your Story so the venue can repost you!
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', color: 'var(--text-light)', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
+                {venueIgHandle ? (
+                  <>Tagging <strong>@{venueIgHandle}</strong> & <strong>@SipScoutsApp</strong></>
+                ) : (
+                  <>Tag <strong>@SipScoutsApp</strong> in your post or story!</>
+                )}
               </p>
 
+              {/* Format Switcher: 9:16 Story vs 1:1 Feed Post */}
+              <div style={{ display: 'inline-flex', background: 'rgba(74, 46, 32, 0.08)', borderRadius: 10, padding: 3, marginBottom: '0.75rem', gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setStoryFormat('story')}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: storyFormat === 'story' ? 'var(--primary)' : 'transparent',
+                    color: storyFormat === 'story' ? '#fff' : 'var(--text-main)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  📱 9:16 Story
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStoryFormat('square')}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: storyFormat === 'square' ? 'var(--primary)' : 'transparent',
+                    color: storyFormat === 'square' ? '#fff' : 'var(--text-main)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🟦 1:1 Feed Post
+                </button>
+              </div>
+
+              {/* Theme Selector: Mascot Hero Layouts */}
+              <div style={{ marginBottom: '0.65rem', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>
+                  🎨 Lively Mascot Themes:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.35rem' }}>
+                  {[
+                    { key: 'starry_hero', label: '🌌 Speakeasy' },
+                    { key: 'matcha_hero', label: '🍵 Matcha Zen' },
+                    { key: 'espresso_hero', label: '☕ Dark Roast' },
+                    { key: 'terracotta_hero', label: '🏺 Terracotta' },
+                  ].map(t => {
+                    const isSelected = storyTheme === t.key
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setStoryTheme(t.key as any)}
+                        style={{
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: 8,
+                          border: isSelected ? '1.5px solid var(--primary)' : '1px solid rgba(74, 46, 32, 0.16)',
+                          background: isSelected ? 'rgba(226, 114, 91, 0.15)' : '#ffffff',
+                          color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                          fontSize: '0.72rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.25rem',
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Theme Selector: Classic Boxed Layouts */}
+              <div style={{ marginBottom: '0.85rem', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem', letterSpacing: '0.04em' }}>
+                  📦 Classic Gallery Boxed:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.35rem' }}>
+                  {[
+                    { key: 'neon', label: '🍸 Nighthawks' },
+                    { key: 'matcha', label: '🍵 Hiroshige' },
+                    { key: 'espresso', label: '☕ Cézanne' },
+                    { key: 'terracotta', label: '🏺 Klimt Gold' },
+                  ].map(t => {
+                    const isSelected = storyTheme === t.key
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setStoryTheme(t.key as any)}
+                        style={{
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: 8,
+                          border: isSelected ? '1.5px solid var(--primary)' : '1px solid rgba(74, 46, 32, 0.16)',
+                          background: isSelected ? 'rgba(226, 114, 91, 0.15)' : '#ffffff',
+                          color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                          fontSize: '0.72rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.25rem',
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Image Preview with dynamic aspect ratio */}
               <div
                 style={{
                   width: '100%',
-                  maxWidth: 230,
-                  margin: '0 auto 0.9rem',
-                  borderRadius: 16,
+                  maxWidth: storyFormat === 'story' ? 210 : 250,
+                  margin: '0 auto 0.85rem',
+                  borderRadius: 14,
                   overflow: 'hidden',
                   border: '2px solid var(--primary)',
                   boxShadow: '0 8px 24px rgba(74, 46, 32, 0.2)',
@@ -1511,35 +1668,38 @@ export default function DiscoverPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  key={storyImageUrl}
                   src={storyImageUrl}
-                  alt={`Instagram Story card for ${storyModalVenue.name}`}
+                  alt={`Instagram card for ${storyModalVenue.name}`}
                   style={{ width: '100%', height: 'auto', display: 'block' }}
                 />
               </div>
 
+              {/* Pre-formatted caption box */}
               <div
                 style={{
                   background: 'rgba(74, 46, 32, 0.06)',
                   border: '1px solid rgba(74, 46, 32, 0.16)',
                   borderRadius: 12,
-                  padding: '0.6rem 0.75rem',
-                  fontSize: '0.78rem',
+                  padding: '0.55rem 0.7rem',
+                  fontSize: '0.76rem',
                   fontFamily: 'Inter, sans-serif',
                   color: 'var(--text-main)',
                   textAlign: 'left',
                   marginBottom: '0.85rem',
                   lineHeight: 1.45,
+                  wordBreak: 'break-word',
                 }}
               >
                 {captionText}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                <a
-                  href={storyImageUrl}
-                  download={`sipscouts-story-${storyModalVenue.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {/* Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={handleShareOrSave}
+                  disabled={isSharingImage}
                   className="warm-btn"
                   style={{
                     width: '100%',
@@ -1549,44 +1709,69 @@ export default function DiscoverPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '0.65rem 1rem',
-                    fontSize: '0.88rem',
+                    fontSize: '0.86rem',
+                    cursor: isSharingImage ? 'wait' : 'pointer',
                   }}
                 >
-                  📥 Save / Open 9:16 Story Image
-                </a>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(captionText)
-                      setStoryCaptionCopied(true)
-                      setTimeout(() => setStoryCaptionCopied(false), 3000)
-                    } catch {
-                      // Ignore
-                    }
-                  }}
-                  className="warm-btn-ghost"
-                  style={{
-                    width: '100%',
-                    minBlockSize: 40,
-                    padding: '0.6rem 1rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    border: '1.5px solid var(--primary)',
-                    color: 'var(--primary)',
-                    background: 'rgba(255,255,255,0.92)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {storyCaptionCopied ? '✅ Caption & @Tags Copied!' : `📋 Copy @Tags (${venueIgHandle ? `@${venueIgHandle} + ` : ''}@SipScoutsApp)`}
+                  {isSharingImage ? '⏳ Preparing Image...' : '📤 Share to Instagram / Save'}
                 </button>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+                  <a
+                    href={storyImageUrl}
+                    download={`sipscouts-${storyFormat}-${storyModalVenue.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="warm-btn-ghost"
+                    style={{
+                      minBlockSize: 38,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.45rem 0.6rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: '1.5px solid var(--border)',
+                      color: 'var(--text-main)',
+                      background: '#ffffff',
+                    }}
+                  >
+                    📥 Download
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(captionText)
+                        setStoryCaptionCopied(true)
+                        setTimeout(() => setStoryCaptionCopied(false), 3000)
+                      } catch {
+                        // Ignore
+                      }
+                    }}
+                    className="warm-btn-ghost"
+                    style={{
+                      minBlockSize: 38,
+                      padding: '0.45rem 0.6rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: '1.5px solid var(--primary)',
+                      color: 'var(--primary)',
+                      background: 'rgba(255,255,255,0.95)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {storyCaptionCopied ? '✅ Copied!' : '📋 Copy @Tags'}
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => setStoryModalVenue(null)}
                   className="warm-btn-ghost"
-                  style={{ width: '100%', minBlockSize: 38, padding: '0.5rem 1rem', cursor: 'pointer', border: 'none' }}
+                  style={{ width: '100%', minBlockSize: 34, padding: '0.4rem 1rem', cursor: 'pointer', border: 'none', color: 'var(--text-light)', fontSize: '0.8rem' }}
                 >
                   Done
                 </button>
