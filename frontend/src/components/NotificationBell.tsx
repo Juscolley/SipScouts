@@ -15,21 +15,49 @@ export default function NotificationBell() {
 
   useEffect(() => {
     async function checkSubscription() {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-      if ('Notification' in window && Notification.permission === 'denied') {
+      if (typeof window === 'undefined') return
+
+      // Fast check local storage first so UI never flashes or unsets
+      try {
+        if (localStorage.getItem('sipscouts_push_subscribed_v1') === '1') {
+          setStatus('subscribed')
+        }
+      } catch {
+        // Ignore
+      }
+
+      if (!('Notification' in window)) return
+      if (Notification.permission === 'denied') {
         setStatus('denied')
         return
       }
+
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+
       try {
-        const reg = await navigator.serviceWorker.ready
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) {
-          setStatus('subscribed')
-        } else {
-          setStatus('idle')
+        let reg: ServiceWorkerRegistration | undefined
+        try {
+          reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 2500)),
+          ])
+        } catch {
+          reg = await navigator.serviceWorker.getRegistration()
+        }
+
+        if (reg) {
+          const sub = await reg.pushManager.getSubscription()
+          if (sub) {
+            setStatus('subscribed')
+            try {
+              localStorage.setItem('sipscouts_push_subscribed_v1', '1')
+            } catch {
+              // Ignore
+            }
+          }
         }
       } catch {
-        setStatus('idle')
+        // Keep existing status
       }
     }
     checkSubscription()
