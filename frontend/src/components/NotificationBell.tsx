@@ -80,12 +80,23 @@ export default function NotificationBell() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      await supabase.from('push_subscriptions').upsert({
-        user_id: user?.id ?? null,
-        endpoint: sub.endpoint,
-        p256dh: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : '',
-        auth_key: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
-      }, { onConflict: 'endpoint' })
+      // Local storage backup in case Supabase RLS is restrictive
+      try {
+        localStorage.setItem('sipscouts_push_subscribed_v1', '1')
+      } catch {
+        // Ignore
+      }
+
+      try {
+        await supabase.from('push_subscriptions').upsert({
+          user_id: user?.id ?? null,
+          endpoint: sub.endpoint,
+          p256dh: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : '',
+          auth_key: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
+        }, { onConflict: 'endpoint' })
+      } catch (err) {
+        console.warn('Supabase push record failed, but browser push is active:', err)
+      }
 
       clearTimeout(safetyTimer)
       setStatus('subscribed')
@@ -105,6 +116,12 @@ export default function NotificationBell() {
     }, 4000)
 
     try {
+      try {
+        localStorage.removeItem('sipscouts_push_subscribed_v1')
+      } catch {
+        // Ignore
+      }
+
       let reg: ServiceWorkerRegistration | undefined
       try {
         reg = await Promise.race([
@@ -120,8 +137,12 @@ export default function NotificationBell() {
         if (sub) {
           const endpoint = sub.endpoint
           await sub.unsubscribe()
-          const supabase = createClient()
-          await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+          try {
+            const supabase = createClient()
+            await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+          } catch {
+            // Ignore
+          }
         }
       }
       clearTimeout(safetyTimer)
