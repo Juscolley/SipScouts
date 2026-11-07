@@ -26,7 +26,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
   const description = venue
     ? `Tap to view ${venue}${city ? ` in ${city}` : ''}, claim your free SipScouts badge, or forward to a friend!`
-    : `Sip DNA: ${drink}. Tap to claim your own free SipScouts badge and discover hidden-gem cafés, tea houses & cocktail bars nearby!`
+    : `Sip DNA: ${drink}. Tap to claim your own free SipScouts badge and discover hidden-gem cafés, tea houses, cocktail bars & zero-proof spots nearby!`
 
   const ogImageUrl = `https://www.sipscouts.com/og/badge?${ogParams.toString()}`
 

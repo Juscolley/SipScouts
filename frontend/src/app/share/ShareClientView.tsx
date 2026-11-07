@@ -154,7 +154,7 @@ export default function ShareClientView({
               lineHeight: 1.5,
             }}
           >
-            ✨ <strong>Instant Access (No App Store Download):</strong> Claim your own free <strong>SipScouts Badge</strong>, save your favorite drinks &amp; ingredients, and scout hidden-gem cafés, tea houses, and cocktail bars near you!
+            ✨ <strong>Instant Access (No App Store Download):</strong> Claim your own free <strong>SipScouts Badge</strong>, save your favorite drinks &amp; ingredients, and scout hidden-gem cafés, tea houses, cocktail bars, and zero-proof spots near you!
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

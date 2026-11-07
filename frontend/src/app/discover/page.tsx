@@ -936,7 +936,7 @@ export default function DiscoverPage() {
                           cursor: 'default',
                         }}
                       >
-                        {v.type === 'bar' ? '🍸 Bar' : '☕ Cafe'}
+                        {v.type === 'zero_proof' ? '🍹 Zero-Proof' : v.type === 'bar' ? '🍸 Bar' : '☕ Cafe'}
                       </span>
 
                       {isPotential ? (

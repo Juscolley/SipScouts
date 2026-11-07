@@ -12,12 +12,18 @@ logger = logging.getLogger(__name__)
 # Maximum distance (in miles) allowed from the user's search center (works globally across all countries).
 MAX_LOCAL_DISTANCE_MILES = 55.0
 
+MOCKTAIL_KEYWORDS = (
+    "mocktail", "mocktails", "zero-proof", "zero proof", "non-alcoholic", "na cocktail",
+    "seedlip", "ghia", "botanical", "shrub", "adaptogen", "phony negroni",
+    "kin euphorics", "de soi", "kombucha", "temperance",
+)
+
 COCKTAIL_KEYWORDS = (
     "negroni", "mezcal", "martini", "margarita", "spritz", "old fashioned",
     "manhattan", "mojito", "daiquiri", "paloma", "sour", "gimlet", "chartreuse",
     "amaro", "campari", "aperol", "yuzu", "elderflower", "bourbon", "rye",
     "whiskey", "scotch", "gin", "tequila", "rum", "vodka", "sake", "soju",
-    "wine", "beer", "cocktail", "speakeasy", "aperitivo", "mocktail", "vermouth",
+    "wine", "beer", "cocktail", "speakeasy", "aperitivo", "vermouth",
     "absinthe", "pisco", "caipirinha", "sangria", "mule", "bitters", "bar",
 )
 
@@ -34,16 +40,18 @@ def _is_configured(val: Optional[str]) -> bool:
 
 
 def build_smart_search_query(keywords: str) -> str:
-    """Builds a category-aware query supporting specialty coffee, tea houses, and craft cocktail bars."""
+    """Builds a category-aware query supporting specialty coffee, tea houses, craft cocktail bars, and zero-proof spots."""
     kw = (keywords or "").strip()
     kw_lower = kw.lower()
+    if any(w in kw_lower for w in MOCKTAIL_KEYWORDS):
+        return f"{kw} mocktails OR zero-proof OR lounge OR cocktail bar".strip()
     if any(w in kw_lower for w in COCKTAIL_KEYWORDS):
         return f"{kw} cocktail bar OR speakeasy OR lounge OR bar".strip()
     if any(w in kw_lower for w in TEA_KEYWORDS):
         return f"{kw} tea house OR matcha bar OR cafe".strip()
     if kw:
-        return f"{kw} specialty cafe OR tea house OR cocktail bar".strip()
-    return "specialty coffee OR tea house OR cocktail bar"
+        return f"{kw} specialty cafe OR tea house OR cocktail bar OR zero-proof".strip()
+    return "specialty coffee OR tea house OR cocktail bar OR mocktails"
 
 
 def _extract_links(website_uri: Optional[str]) -> tuple[Optional[str], Optional[str]]:
@@ -85,6 +93,7 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
     data = resp.json()
     results: List[Dict] = []
     kw_lower = query.lower()
+    is_mocktail_query = any(w in kw_lower for w in MOCKTAIL_KEYWORDS)
     is_cocktail_query = any(w in kw_lower for w in COCKTAIL_KEYWORDS)
 
     for place in data.get("places", []):
@@ -101,11 +110,12 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
             continue
 
         types = place.get("types", []) or []
-        venue_type = (
-            "bar"
-            if any(t in types for t in ("bar", "night_club", "pub", "wine_bar", "liquor_store")) or is_cocktail_query
-            else "cafe"
-        )
+        if is_mocktail_query:
+            venue_type = "zero_proof"
+        elif any(t in types for t in ("bar", "night_club", "pub", "wine_bar", "liquor_store")) or is_cocktail_query:
+            venue_type = "bar"
+        else:
+            venue_type = "cafe"
         tags = ["Google Places"]
         if place.get("rating"):
             tags.append(f"★ {place['rating']}")
@@ -189,13 +199,16 @@ def _search_places_legacy(api_key: str, query: str, lat: float, lon: float, radi
 def _build_local_category_fallback_query(keywords: str) -> str:
     """Builds a broader local category query when a rare ingredient+drink combo has few exact matches locally."""
     kw = (keywords or "").strip().lower()
+    for word in MOCKTAIL_KEYWORDS:
+        if word in kw:
+            return f"{word} mocktails OR zero-proof lounge OR cocktail bar"
     for word in COCKTAIL_KEYWORDS:
         if word in kw:
             return f"{word} craft cocktail bar OR lounge"
     for word in TEA_KEYWORDS:
         if word in kw:
             return f"{word} tea house OR specialty cafe"
-    return "specialty coffee cafe OR craft cocktail bar"
+    return "specialty coffee cafe OR craft cocktail bar OR mocktails"
 
 
 def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]:
