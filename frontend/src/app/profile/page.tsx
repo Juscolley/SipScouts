@@ -131,10 +131,15 @@ export default function ProfilePage() {
   const earnedBadgeName =
     bookmarks.length >= 3
       ? 'Neighborhood Tastemaker'
-      : profile.favorite_drinks.some(d => /matcha|tea|chai|hojicha/i.test(d))
-      ? 'Matcha & Tea Maven'
-      : profile.favorite_drinks.some(d => /martini|negroni|mezcal|spritz|margarita|cocktail/i.test(d))
+      : profile.favorite_drinks.some(d => /matcha|tea|chai|hojicha/i.test(d)) ||
+        profile.favorite_ingredients.some(i => /matcha|tea|chai|hojicha/i.test(i))
+      ? 'Matcha Maven'
+      : profile.favorite_drinks.some(d => /martini|negroni|mezcal|spritz|margarita|cocktail|bourbon|whiskey|gin|rum|tequila/i.test(d)) ||
+        profile.favorite_ingredients.some(i => /mezcal|gin|bourbon|whiskey|tequila|rum|vermouth|bitters/i.test(i))
       ? 'Speakeasy Scout'
+      : profile.favorite_drinks.some(d => /coffee|espresso|latte|cortado|cold brew|cappuccino|pour over|flat white|americano|roast|macchiato/i.test(d)) ||
+        profile.favorite_ingredients.some(i => /espresso|coffee|bean|roast|caffeine/i.test(i))
+      ? 'Caffeine Connoisseur'
       : 'Founding Sip Scout'
 
   const sipDnaSummary =
