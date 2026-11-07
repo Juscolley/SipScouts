@@ -1,8 +1,11 @@
 import asyncio
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
+import httpx
 
 from app import models
 from app.database import SessionLocal
@@ -24,6 +27,73 @@ PARALLEL_SCRAPER_TIMEOUT_SECONDS = 5.0
 # Fast in-memory search result cache: (query_lower, lat_rounded, lon_rounded) -> (timestamp, venues)
 _SEARCH_CACHE: Dict[Tuple[str, float, float], Tuple[float, List[Dict]]] = {}
 _SEARCH_CACHE_TTL = 600  # 10 minutes
+
+# In-memory Instagram handle cache by domain to avoid redundant web scraping
+_IG_DOMAIN_CACHE: Dict[str, Optional[str]] = {}
+
+_IGNORE_IG_HANDLES = {
+    "p", "reel", "reels", "stories", "explore", "about", "legal", "terms",
+    "privacy", "developer", "help", "support", "directory", "accounts", "direct",
+    "instagram", "facebook", "twitter", "linkedin", "tiktok", "youtube", "share"
+}
+
+
+async def _extract_instagram_from_website(client: httpx.AsyncClient, website_url: str) -> Optional[str]:
+    """Fast, safe scraper to extract the official Instagram profile link from a venue's website HTML."""
+    if not website_url or not website_url.startswith("http"):
+        return None
+    try:
+        domain = urlparse(website_url).netloc.lower()
+        if domain in _IG_DOMAIN_CACHE:
+            return _IG_DOMAIN_CACHE[domain]
+
+        resp = await client.get(
+            website_url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                ),
+                "Accept": "text/html,application/xhtml+xml",
+            },
+            follow_redirects=True,
+            timeout=2.2,
+        )
+        if resp.status_code == 200:
+            matches = re.findall(r'instagram\.com/([a-zA-Z0-9_\.]{3,30})/?', resp.text, re.IGNORECASE)
+            for m in matches:
+                clean_handle = m.lower().strip(".")
+                if clean_handle and clean_handle not in _IGNORE_IG_HANDLES:
+                    ig_url = f"https://www.instagram.com/{clean_handle}/"
+                    _IG_DOMAIN_CACHE[domain] = ig_url
+                    return ig_url
+
+        _IG_DOMAIN_CACHE[domain] = None
+        return None
+    except Exception as e:
+        logger.debug(f"IG website crawl skipped for {website_url}: {e}")
+        return None
+
+
+async def enrich_venues_with_instagram(venues: List[Dict]) -> None:
+    """Enriches venues missing instagram_url in parallel using their website."""
+    to_enrich = [v for v in venues if not v.get("instagram_url") and v.get("website")]
+    if not to_enrich:
+        return
+
+    # Cap parallel crawls to top 15 venues to keep response instantaneous
+    targets = to_enrich[:15]
+    try:
+        async with httpx.AsyncClient(verify=False) as client:
+            results = await asyncio.gather(
+                *[_extract_instagram_from_website(client, v["website"]) for v in targets],
+                return_exceptions=True
+            )
+            for v, res in zip(targets, results):
+                if isinstance(res, str) and res.startswith("https://"):
+                    v["instagram_url"] = res
+    except Exception as e:
+        logger.warning(f"Parallel Instagram website enrichment notice: {e}")
 
 
 def _normalize_venue(raw: Dict, default_tag: str) -> Optional[Dict]:
@@ -230,6 +300,9 @@ async def orchestrate_search(
         v for v in _deduplicate_and_merge(collected)
         if calculate_haversine_distance(lat, lon, v["lat"], v["lng"]) <= 55.0
     ]
+
+    # Scrape website HTML in parallel for official Instagram handles
+    await enrich_venues_with_instagram(deduped)
 
     # Persist discovered venues to SQLite in background thread
     if deduped:

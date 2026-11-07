@@ -1059,11 +1059,13 @@ export default function DiscoverPage() {
                         </a>
                       )}
 
-                      {/* Always-Visible Instagram Button (Opens profile or Instagram keyword search for venue) */}
+                      {/* Instagram Button: Direct verified profile or targeted search */}
                       {(() => {
+                        const isVerifiedProfile = Boolean(v.instagram_url)
                         const igHref =
                           v.instagram_url ||
-                          `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(v.name)}`
+                          `https://www.google.com/search?q=${encodeURIComponent(v.name + (v.address ? ' ' + v.address : '') + ' instagram')}`
+
                         return (
                           <a
                             href={igHref}
@@ -1092,18 +1094,26 @@ export default function DiscoverPage() {
                               padding: '0.3rem 0.7rem',
                               borderRadius: 10,
                               background: '#ffffff',
-                              border: '1.5px solid var(--primary)',
-                              boxShadow: '0 2px 0 rgba(226, 114, 91, 0.24), 0 4px 10px rgba(226, 114, 91, 0.12)',
+                              border: isVerifiedProfile
+                                ? '1.5px solid var(--primary)'
+                                : '1.5px solid rgba(74, 46, 32, 0.28)',
+                              boxShadow: isVerifiedProfile
+                                ? '0 2px 0 rgba(226, 114, 91, 0.24), 0 4px 10px rgba(226, 114, 91, 0.12)'
+                                : '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
                               fontSize: '0.76rem',
                               fontFamily: 'Inter, sans-serif',
                               fontWeight: 700,
-                              color: 'var(--primary)',
+                              color: isVerifiedProfile ? 'var(--primary)' : 'var(--text-main)',
                               textDecoration: 'none',
                               cursor: 'pointer',
                             }}
-                            title={`View ${v.name} on Instagram`}
+                            title={
+                              isVerifiedProfile
+                                ? `View official @${v.name} profile on Instagram`
+                                : `Search for ${v.name} on Instagram`
+                            }
                           >
-                            📸 Instagram ↗
+                            📸 {isVerifiedProfile ? 'Instagram ↗' : 'Find IG ↗'}
                           </a>
                         )
                       })()}
