@@ -287,6 +287,19 @@ export default function MerchantDashboard() {
     URL.revokeObjectURL(url)
   }
 
+  function handleClearLocalBetaCache() {
+    if (confirm('Clear local browser beta testing cache? This resets your device backup so only live Supabase data appears.')) {
+      try {
+        localStorage.removeItem('sipscouts_venue_clicks_backup_v1')
+        localStorage.removeItem('sipscouts_user_feedback_v1')
+      } catch {
+        // Ignore
+      }
+      setClickRows([])
+      window.location.reload()
+    }
+  }
+
   const stats = [
     { label: 'Total Searches', value: totalSearches },
     { label: 'Top Craved Drink', value: topDrink },
@@ -371,6 +384,15 @@ export default function MerchantDashboard() {
                   style={{ padding: '0.65rem 1.1rem', fontSize: '0.85rem', borderRadius: 10 }}
                 >
                   📥 Export B2B Report (CSV)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearLocalBetaCache}
+                  className="warm-btn-ghost"
+                  title="Resets local testing clicks & backup cached on this browser"
+                  style={{ padding: '0.65rem 1.1rem', fontSize: '0.85rem', borderRadius: 10, color: 'var(--text-light)', border: '1px solid var(--border)' }}
+                >
+                  🗑️ Clear Local Beta Cache
                 </button>
               </div>
             )}
