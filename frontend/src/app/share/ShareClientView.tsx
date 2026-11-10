@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { trackVenueAction } from '@/lib/analytics'
+import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 
 interface ShareClientProps {
   badge: string
@@ -10,6 +11,8 @@ interface ShareClientProps {
   address: string
   drink: string
   city: string
+  venueLat?: number
+  venueLng?: number
 }
 
 export default function ShareClientView({
@@ -19,8 +22,29 @@ export default function ShareClientView({
   address,
   drink,
   city,
+  venueLat,
+  venueLng,
 }: ShareClientProps) {
   const [copied, setCopied] = useState(false)
+  const geo = useGeolocation()
+
+  const liveDistanceMiles = useMemo(() => {
+    if (
+      geo.latitude === null ||
+      geo.longitude === null ||
+      venueLat === undefined ||
+      venueLng === undefined
+    ) {
+      return null
+    }
+    const km = distanceKm(geo.latitude, geo.longitude, venueLat, venueLng)
+    if (Number.isNaN(km)) return null
+    return (km * 0.621371).toFixed(1)
+  }, [geo.latitude, geo.longitude, venueLat, venueLng])
+
+  const mapsUrl = venue
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue} ${address || city}`)}`
+    : ''
 
   async function handleForwardToFriend() {
     const shareUrl = window.location.href
@@ -121,12 +145,44 @@ export default function ShareClientView({
           {venue ? (
             <>
               <h1 className="serif" style={{ fontSize: '1.85rem', lineHeight: 1.25, marginBottom: '0.6rem', color: 'var(--text-main)' }}>
-                {scout} scouted <span style={{ color: 'var(--primary)' }}>{drink}</span> at {venue}!
+                {scout} wants to meet for <span style={{ color: 'var(--primary)' }}>{drink}</span> at {venue}!
               </h1>
               {address && (
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '1.25rem' }}>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.92rem', color: 'var(--text-light)', marginBottom: '0.85rem' }}>
                   📍 {address}
+                  {liveDistanceMiles !== null && (
+                    <strong style={{ color: 'var(--primary)', marginLeft: '0.45rem' }}>
+                      ({liveDistanceMiles} mi from you)
+                    </strong>
+                  )}
                 </p>
+              )}
+              {mapsUrl && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="warm-btn-ghost"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.55rem 1rem',
+                      fontSize: '0.86rem',
+                      fontWeight: 700,
+                      borderRadius: 12,
+                      border: '1.5px solid var(--primary)',
+                      color: 'var(--primary)',
+                      background: '#ffffff',
+                      textDecoration: 'none',
+                      boxShadow: '0 2px 0 rgba(226, 114, 91, 0.2), 0 4px 10px rgba(74, 46, 32, 0.08)',
+                    }}
+                  >
+                    🗺️ Open in Maps &amp; Get Directions ↗
+                  </a>
+                </div>
               )}
             </>
           ) : (

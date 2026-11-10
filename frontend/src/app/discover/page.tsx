@@ -273,7 +273,6 @@ export default function DiscoverPage() {
           favorite_ingredients: Array.isArray(parsed.favorite_ingredients) ? parsed.favorite_ingredients : [],
         }
         setMemberProfile(summary)
-        setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
       }
     } catch {
       // Ignore
@@ -303,7 +302,6 @@ export default function DiscoverPage() {
           )
           if (hasData) {
             setMemberProfile(summary)
-            setLocationInput(prev => (prev.trim() ? prev : summary.zip_code))
             try {
               localStorage.setItem(
                 'sipscouts_profile_v1',
@@ -366,10 +364,13 @@ export default function DiscoverPage() {
     shareParams.set('drink', activeCraving)
     shareParams.set('scout', scoutName)
     if (cityVal) shareParams.set('city', cityVal)
+    if (v.lat !== undefined && v.lat !== null) shareParams.set('lat', String(v.lat))
+    if (v.lng !== undefined && v.lng !== null) shareParams.set('lng', String(v.lng))
 
     const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
-    const distLabel = v.distanceKm !== undefined ? ` (${(v.distanceKm * 0.621371).toFixed(1)} mi away)` : ''
-    const shareText = `🥂 Meet me for ${activeCraving} at ${v.name}${distLabel}! Scouted on SipScouts:`
+    const streetName = v.address ? v.address.split(',')[0].trim() : ''
+    const locationSnippet = streetName ? ` (${streetName})` : cityVal ? ` (${cityVal})` : ''
+    const shareText = `🥂 Meet me for ${activeCraving} at ${v.name}${locationSnippet}! Scouted on SipScouts:`
 
     if (navigator.share) {
       try {
@@ -556,8 +557,11 @@ export default function DiscoverPage() {
               type="text"
               value={locationInput}
               onChange={e => setLocationInput(e.target.value)}
-              placeholder="ZIP or CITY"
+              placeholder="Type Zip or City"
             />
+            <span style={{ fontSize: '0.68rem', color: 'rgba(255, 240, 228, 0.88)', textShadow: '0 1px 3px rgba(0,0,0,0.5)', marginTop: '0.28rem', display: 'block', fontFamily: 'Inter, sans-serif' }}>
+              Leave blank to scout near your current location
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', flex: '1 1 140px' }}>
             <button type="submit" className="warm-btn" disabled={loading} style={{ width: '100%' }}>

@@ -56,6 +56,10 @@ export default async function SharePage({ searchParams }: Props) {
   const address = typeof params.address === 'string' ? params.address : ''
   const drink = (typeof params.drink === 'string' ? params.drink : '') || 'Specialty Coffee, Matcha, Cocktails & Zero-Proof'
   const city = typeof params.city === 'string' ? params.city : ''
+  const rawLat = typeof params.lat === 'string' ? parseFloat(params.lat) : undefined
+  const rawLng = typeof params.lng === 'string' ? parseFloat(params.lng) : undefined
+  const venueLat = typeof rawLat === 'number' && !Number.isNaN(rawLat) ? rawLat : undefined
+  const venueLng = typeof rawLng === 'number' && !Number.isNaN(rawLng) ? rawLng : undefined
 
   return (
     <ShareClientView
@@ -65,6 +69,8 @@ export default async function SharePage({ searchParams }: Props) {
       address={address}
       drink={drink}
       city={city}
+      venueLat={venueLat}
+      venueLng={venueLng}
     />
   )
 }
