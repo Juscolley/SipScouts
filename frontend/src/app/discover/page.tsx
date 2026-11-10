@@ -240,23 +240,6 @@ export default function DiscoverPage() {
       })
       return
     }
-
-    try {
-      const savedRaw = sessionStorage.getItem(SEARCH_STORAGE_KEY)
-      if (savedRaw) {
-        const parsed = JSON.parse(savedRaw)
-        if (parsed && Array.isArray(parsed.venues) && parsed.searched) {
-          setDrink(parsed.drink ?? '')
-          setIngredient(parsed.ingredient ?? '')
-          setLocationInput(parsed.locationInput ?? '')
-          setSearchCenter(parsed.searchCenter ?? null)
-          setVenues(parsed.venues)
-          setSearched(true)
-        }
-      }
-    } catch {
-      // Ignore storage errors
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -541,23 +524,51 @@ export default function DiscoverPage() {
           )}
         </section>
 
-        <form onSubmit={handleSearch} style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <form
+          onSubmit={handleSearch}
+          autoComplete="off"
+          style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
+        >
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
-            <input className="warm-input" type="text" value={drink} onChange={e => setDrink(e.target.value)} placeholder="e.g. Oat Latte, Matcha, Phony Negroni…" />
+            <input
+              className="warm-input"
+              type="text"
+              name="sipscouts_drink"
+              value={drink}
+              onChange={e => setDrink(e.target.value)}
+              placeholder="e.g. Oat Latte, Matcha, Phony Negroni…"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
           </div>
           <div style={{ flex: '1 1 190px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
-            <input className="warm-input" type="text" value={ingredient} onChange={e => setIngredient(e.target.value)} placeholder="e.g. Cardamom, Yuzu, Seedlip, Mezcal…" />
+            <input
+              className="warm-input"
+              type="text"
+              name="sipscouts_ingredient"
+              value={ingredient}
+              onChange={e => setIngredient(e.target.value)}
+              placeholder="e.g. Cardamom, Yuzu, Seedlip, Mezcal…"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
           </div>
           <div style={{ flex: '1 1 170px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
             <input
               className="warm-input"
               type="text"
+              name="sipscouts_location"
               value={locationInput}
               onChange={e => setLocationInput(e.target.value)}
               placeholder="Type Zip or City"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
             <span style={{ fontSize: '0.68rem', color: 'rgba(255, 240, 228, 0.88)', textShadow: '0 1px 3px rgba(0,0,0,0.5)', marginTop: '0.28rem', display: 'block', fontFamily: 'Inter, sans-serif' }}>
               Leave blank to scout near your current location
