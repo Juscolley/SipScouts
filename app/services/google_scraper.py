@@ -34,6 +34,43 @@ TEA_KEYWORDS = (
     "london fog", "genmaicha", "gyokuro", "darjeeling", "assam", "white tea",
 )
 
+# Valid Google Places types for venues that actually serve drinks/beverages
+ALLOWED_DRINK_VENUE_TYPES = frozenset({
+    "cafe", "coffee_shop", "tea_house", "bar", "cocktail_bar", "wine_bar",
+    "pub", "night_club", "bakery", "juice_shop", "ice_cream_shop",
+    "dessert_shop", "restaurant", "bistro", "brunch_restaurant",
+    "breakfast_restaurant", "bubble_tea_store", "brewery", "winery",
+    "distillery", "lounge", "meal_takeaway", "food",
+})
+
+# Non-beverage retail/service primary types to always reject (e.g., Apple Store -> electronics_store)
+BLOCKED_PRIMARY_TYPES = frozenset({
+    "electronics_store", "cell_phone_store", "computer_store",
+    "department_store", "clothing_store", "shoe_store", "jewelry_store",
+    "furniture_store", "hardware_store", "home_goods_store",
+    "home_improvement_store", "auto_repair", "car_dealer", "car_rental",
+    "gas_station", "bank", "atm", "pharmacy", "hospital", "doctor",
+    "dentist", "gym", "fitness_center", "beauty_salon", "hair_care",
+    "lodging", "school", "university", "library", "museum", "park",
+    "real_estate_agency", "insurance_agency", "lawyer", "accounting",
+    "travel_agency", "post_office", "pet_store", "veterinary_care",
+    "laundry", "dry_cleaning", "storage", "moving_company", "movie_theater",
+    "stadium", "shopping_mall", "supermarket", "grocery_store",
+})
+
+
+def _is_valid_drink_venue(types: List[str], primary_type: Optional[str] = None) -> bool:
+    """Ensures a Google Places result is a legitimate food/beverage venue and not unrelated retail (e.g., Apple Store)."""
+    pt = (primary_type or "").strip().lower()
+    if pt in BLOCKED_PRIMARY_TYPES:
+        return False
+    normalized_types = {t.strip().lower() for t in (types or []) if t}
+    if pt:
+        normalized_types.add(pt)
+    if not normalized_types:
+        return False
+    return bool(normalized_types & ALLOWED_DRINK_VENUE_TYPES)
+
 
 def _is_configured(val: Optional[str]) -> bool:
     return bool(val and val.strip() and val.strip().lower() != "placeholder")
@@ -110,6 +147,9 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
             continue
 
         types = place.get("types", []) or []
+        if not _is_valid_drink_venue(types, place.get("primaryType")):
+            continue
+
         if is_mocktail_query:
             venue_type = "zero_proof"
         elif any(t in types for t in ("bar", "night_club", "pub", "wine_bar", "liquor_store")) or is_cocktail_query:
@@ -173,6 +213,9 @@ def _search_places_legacy(api_key: str, query: str, lat: float, lon: float, radi
             continue
 
         types = place.get("types", []) or []
+        if not _is_valid_drink_venue(types):
+            continue
+
         venue_type = "bar" if any(t in types for t in ("bar", "night_club")) else "cafe"
         tags = ["Google Places"]
         if place.get("rating"):
@@ -222,8 +265,8 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     collected: List[Dict] = []
     seen_ids = set()
 
-    # Stage 1: Closest Exact Matches within 55 miles
-    exact_query = f'"{kw_clean}"' if " " in kw_clean else search_query
+    # Stage 1: Closest Exact Matches within 55 miles (always include drink-venue category context)
+    exact_query = search_query
     try:
         exact_results = _search_places_new(api_key, exact_query, lat, lon, radius_m=50000.0)
         for r in exact_results:
