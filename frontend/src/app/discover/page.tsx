@@ -409,7 +409,7 @@ export default function DiscoverPage() {
     const shareUrl = `${window.location.origin}/?ref=share`
     const shareTitle = 'SipScouts — Find Your Next Perfect Sip'
     const shareText =
-      '🥂 Check out SipScouts — find hidden-gem coffee, tea, craft cocktails, and zero-proof spots near you!'
+      '🥂 Check out SipScouts — find hidden-gem coffee, tea, craft cocktails, and zero-proof mocktail spots near you!'
 
     trackVenueAction({
       venue_name: '__APP_SHARE__',
