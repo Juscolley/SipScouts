@@ -405,6 +405,21 @@ export default function DiscoverPage() {
     }
   }
 
+  const hasActiveSearchOrInput = Boolean(
+    drink.trim() || ingredient.trim() || locationInput.trim() || searched
+  )
+
+  function handleClearSearch() {
+    setDrink('')
+    setIngredient('')
+    setLocationInput('')
+    setVenues([])
+    setSearchCenter(null)
+    setSearched(false)
+    setLoading(false)
+    setDeepLinkCopied(false)
+  }
+
   async function handleShareApp() {
     const shareUrl = `${window.location.origin}/?ref=share`
     const shareTitle = 'SipScouts — Find Your Next Perfect Sip'
@@ -611,10 +626,32 @@ export default function DiscoverPage() {
               Leave blank to scout near your current location
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', flex: '1 1 140px' }}>
-            <button type="submit" className="warm-btn" disabled={loading} style={{ width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flex: '1 1 180px' }}>
+            <button type="submit" className="warm-btn" disabled={loading} style={{ flex: 1 }}>
               {loading ? '🔍 Searching…' : '🔍 Search'}
             </button>
+            {hasActiveSearchOrInput && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                title="Clear search fields and results"
+                style={{
+                  padding: '0.82rem 0.95rem',
+                  borderRadius: 14,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '1.5px solid rgba(74, 46, 32, 0.25)',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(74, 46, 32, 0.12)',
+                }}
+              >
+                ✕ Clear
+              </button>
+            )}
           </div>
         </form>
 
