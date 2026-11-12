@@ -350,6 +350,9 @@ export default function DiscoverPage() {
     if (cityVal) shareParams.set('city', cityVal)
     if (v.lat !== undefined && v.lat !== null) shareParams.set('lat', String(v.lat))
     if (v.lng !== undefined && v.lng !== null) shareParams.set('lng', String(v.lng))
+    if (v.instagram_url) shareParams.set('ig', v.instagram_url)
+    if (v.website) shareParams.set('website', v.website)
+    if (v.phone) shareParams.set('phone', v.phone)
 
     const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
     const streetName = v.address ? v.address.split(',')[0].trim() : ''

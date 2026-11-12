@@ -13,6 +13,26 @@ interface ShareClientProps {
   city: string
   venueLat?: number
   venueLng?: number
+  ig?: string
+  website?: string
+  phone?: string
+}
+
+function toSafeHttpUrl(raw?: string): string {
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  const candidate = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : /^[a-z0-9.-]+\.[a-z]{2,}/i.test(trimmed)
+      ? `https://${trimmed}`
+      : trimmed
+  try {
+    const parsed = new URL(candidate)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : ''
+  } catch {
+    return ''
+  }
 }
 
 export default function ShareClientView({
@@ -24,6 +44,9 @@ export default function ShareClientView({
   city,
   venueLat,
   venueLng,
+  ig,
+  website,
+  phone,
 }: ShareClientProps) {
   const [copied, setCopied] = useState(false)
   const geo = useGeolocation()
@@ -45,6 +68,30 @@ export default function ShareClientView({
   const mapsUrl = venue
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue} ${address || city}`)}`
     : ''
+  const verifiedIgUrl = toSafeHttpUrl(ig)
+  const igUrl = venue
+    ? verifiedIgUrl ||
+      `https://www.google.com/search?q=${encodeURIComponent(`${venue}${address ? ` ${address}` : city ? ` ${city}` : ''} instagram`)}`
+    : ''
+  const websiteUrl = toSafeHttpUrl(website)
+  const cleanPhone = phone ? phone.replace(/[^\d+().\-\sx]/g, '').trim() : ''
+
+  const venueActionBtnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.35rem',
+    minBlockSize: 38,
+    padding: '0.45rem 0.85rem',
+    fontSize: '0.84rem',
+    fontWeight: 700,
+    borderRadius: 12,
+    border: '1.5px solid rgba(74, 46, 32, 0.28)',
+    color: 'var(--text-main)',
+    background: '#ffffff',
+    textDecoration: 'none',
+    boxShadow: '0 2px 0 rgba(74, 46, 32, 0.14), 0 4px 10px rgba(74, 46, 32, 0.08)',
+  }
 
   async function handleForwardToFriend() {
     const shareUrl = window.location.href
@@ -157,31 +204,94 @@ export default function ShareClientView({
                   )}
                 </p>
               )}
-              {mapsUrl && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="warm-btn-ghost"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      padding: '0.55rem 1rem',
-                      fontSize: '0.86rem',
-                      fontWeight: 700,
-                      borderRadius: 12,
-                      border: '1.5px solid var(--primary)',
-                      color: 'var(--primary)',
-                      background: '#ffffff',
-                      textDecoration: 'none',
-                      boxShadow: '0 2px 0 rgba(226, 114, 91, 0.2), 0 4px 10px rgba(74, 46, 32, 0.08)',
-                    }}
-                  >
-                    🗺️ Open in Maps &amp; Get Directions ↗
-                  </a>
+              {venue && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1.25rem',
+                  }}
+                >
+                  {igUrl && (
+                    <a
+                      href={igUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        trackVenueAction({
+                          venue_name: venue,
+                          venue_address: address,
+                          action_type: 'instagram',
+                          searched_drink: drink,
+                          city,
+                        })
+                      }
+                      style={{
+                        ...venueActionBtnStyle,
+                        border: verifiedIgUrl ? '1.5px solid var(--primary)' : venueActionBtnStyle.border,
+                        color: verifiedIgUrl ? 'var(--primary)' : venueActionBtnStyle.color,
+                      }}
+                    >
+                      📸 {verifiedIgUrl ? 'Instagram ↗' : 'Find IG ↗'}
+                    </a>
+                  )}
+
+                  {websiteUrl && (
+                    <a
+                      href={websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        trackVenueAction({
+                          venue_name: venue,
+                          venue_address: address,
+                          action_type: 'website',
+                          searched_drink: drink,
+                          city,
+                        })
+                      }
+                      style={venueActionBtnStyle}
+                    >
+                      🌐 Menu / Site ↗
+                    </a>
+                  )}
+
+                  {cleanPhone && (
+                    <a
+                      href={`tel:${cleanPhone}`}
+                      onClick={() =>
+                        trackVenueAction({
+                          venue_name: venue,
+                          venue_address: address,
+                          action_type: 'call',
+                          searched_drink: drink,
+                          city,
+                        })
+                      }
+                      style={venueActionBtnStyle}
+                    >
+                      📞 Call ↗
+                    </a>
+                  )}
+
+                  {mapsUrl && (
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="warm-btn-ghost"
+                      style={{
+                        ...venueActionBtnStyle,
+                        border: '1.5px solid var(--primary)',
+                        color: 'var(--primary)',
+                        boxShadow: '0 2px 0 rgba(226, 114, 91, 0.2), 0 4px 10px rgba(74, 46, 32, 0.08)',
+                      }}
+                    >
+                      🗺️ Map &amp; Directions ↗
+                    </a>
+                  )}
                 </div>
               )}
             </>
@@ -217,7 +327,20 @@ export default function ShareClientView({
             <a
               href="/login"
               className="warm-btn"
-              style={{ display: 'block', textDecoration: 'none', width: '100%', fontSize: '1rem' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                textDecoration: 'none',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                whiteSpace: 'normal',
+                lineHeight: 1.35,
+                padding: '0.9rem 1.15rem',
+                fontSize: '0.98rem',
+              }}
             >
               🏅 Claim My Free Scout Badge &amp; Profile →
             </a>
@@ -228,6 +351,11 @@ export default function ShareClientView({
               className="warm-btn-ghost"
               style={{
                 width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                whiteSpace: 'normal',
+                textAlign: 'center',
+                lineHeight: 1.35,
                 fontWeight: 600,
                 padding: '0.8rem 1rem',
                 borderRadius: 12,

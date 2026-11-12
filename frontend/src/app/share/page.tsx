@@ -60,6 +60,9 @@ export default async function SharePage({ searchParams }: Props) {
   const rawLng = typeof params.lng === 'string' ? parseFloat(params.lng) : undefined
   const venueLat = typeof rawLat === 'number' && !Number.isNaN(rawLat) ? rawLat : undefined
   const venueLng = typeof rawLng === 'number' && !Number.isNaN(rawLng) ? rawLng : undefined
+  const ig = typeof params.ig === 'string' ? params.ig : ''
+  const website = typeof params.website === 'string' ? params.website : ''
+  const phone = typeof params.phone === 'string' ? params.phone : ''
 
   return (
     <ShareClientView
@@ -71,6 +74,9 @@ export default async function SharePage({ searchParams }: Props) {
       city={city}
       venueLat={venueLat}
       venueLng={venueLng}
+      ig={ig}
+      website={website}
+      phone={phone}
     />
   )
 }
