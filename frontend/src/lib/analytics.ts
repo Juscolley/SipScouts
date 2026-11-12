@@ -7,6 +7,7 @@ export type VenueActionType =
   | 'bookmark'
   | 'share_venue'
   | 'share_badge'
+  | 'share_app'
 
 export interface TrackVenueActionInput {
   venue_name: string

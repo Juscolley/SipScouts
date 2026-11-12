@@ -74,6 +74,7 @@ export default function DiscoverPage() {
   const [memberProfile, setMemberProfile] = useState<MemberProfileSummary | null>(null)
   const [copiedVenueId, setCopiedVenueId] = useState<string | null>(null)
   const [deepLinkCopied, setDeepLinkCopied] = useState(false)
+  const [appShareCopied, setAppShareCopied] = useState(false)
   const [storyModalVenue, setStoryModalVenue] = useState<Venue | null>(null)
   const [storyTheme, setStoryTheme] = useState<
     'starry_hero' | 'matcha_hero' | 'espresso_hero' | 'terracotta_hero' | 'neon' | 'matcha' | 'espresso' | 'terracotta'
@@ -404,6 +405,42 @@ export default function DiscoverPage() {
     }
   }
 
+  async function handleShareApp() {
+    const shareUrl = `${window.location.origin}/?ref=share`
+    const shareTitle = 'SipScouts — Find Your Next Perfect Sip'
+    const shareText =
+      '🥂 Check out SipScouts — find hidden-gem coffee, tea, craft cocktails, and zero-proof spots near you!'
+
+    trackVenueAction({
+      venue_name: '__APP_SHARE__',
+      action_type: 'share_app',
+      searched_drink: drink.trim() || undefined,
+      searched_ingredient: ingredient.trim() || undefined,
+      city: geo.cityLabel || undefined,
+      zip_code: locationInput.trim() || memberProfile?.zip_code?.trim() || undefined,
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+      user_id: userId,
+    })
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl })
+        return
+      } catch {
+        // Fallback to clipboard if user cancels or share fails
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+      setAppShareCopied(true)
+      setTimeout(() => setAppShareCopied(false), 3000)
+    } catch {
+      // Ignore
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
       {/* Fixed hero background */}
@@ -596,6 +633,29 @@ export default function DiscoverPage() {
         >
           <InstallAppButton />
           <NotificationBell />
+          <button
+            type="button"
+            onClick={handleShareApp}
+            style={{
+              padding: '0.5rem 1.05rem',
+              borderRadius: 999,
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              fontFamily: 'Inter, sans-serif',
+              background: appShareCopied ? 'var(--primary)' : 'rgba(255, 255, 255, 0.92)',
+              border: '1.5px solid var(--primary)',
+              color: appShareCopied ? '#fff' : 'var(--text-main)',
+              boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+            }}
+            title="Share SipScouts with a friend"
+          >
+            {appShareCopied ? '✅ App Link Copied!' : '📲 Share SipScouts'}
+          </button>
         </div>
 
         {/* Core Craving Categories: Coffee, Tea, Cocktails, Zero-Proof */}

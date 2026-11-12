@@ -228,7 +228,12 @@ export default function MerchantDashboard() {
 
     filteredClicks.forEach(c => {
       leadTotal += 1
-      const vName = c.venue_name === '__BADGE_SHARE__' ? '🏅 Scout Badge & Sip DNA Shares' : c.venue_name
+      const vName =
+        c.venue_name === '__BADGE_SHARE__'
+          ? '🏅 Scout Badge & Sip DNA Shares'
+          : c.venue_name === '__APP_SHARE__'
+            ? '📲 SipScouts App Shares'
+            : c.venue_name
       if (!leadMap[vName]) {
         leadMap[vName] = {
           venue_name: vName,
@@ -248,7 +253,7 @@ export default function MerchantDashboard() {
       else if (c.action_type === 'instagram') entry.instagram += 1
       else if (c.action_type === 'website') entry.website += 1
       else if (c.action_type === 'bookmark') entry.bookmarks += 1
-      else if (c.action_type === 'share_venue' || c.action_type === 'share_badge') entry.shares += 1
+      else if (c.action_type === 'share_venue' || c.action_type === 'share_badge' || c.action_type === 'share_app') entry.shares += 1
     })
 
     return {
