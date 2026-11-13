@@ -364,7 +364,7 @@ export default function ShareClientView({
                 background: 'rgba(255,255,255,0.92)',
               }}
             >
-              {copied ? '✅ Share Link Copied! Paste in Text or Chat' : '📲 Forward This Badge / Invite a Friend ↗'}
+              {copied ? '✅ Link Copied! Paste in Text or Chat' : '📲 Invite a Friend ↗'}
             </button>
 
             <a
