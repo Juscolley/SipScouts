@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from typing import Dict, List, Optional
 import requests
 from dotenv import load_dotenv
@@ -76,18 +77,37 @@ def _is_configured(val: Optional[str]) -> bool:
     return bool(val and val.strip() and val.strip().lower() != "placeholder")
 
 
+_ACCENT_TWINS = {
+    "latte": "(latte OR latté)",
+    "cafe": "(cafe OR café)",
+    "creme": "(creme OR crème)",
+    "acai": "(acai OR açaí)",
+    "pina": "(pina OR piña)",
+    "rose": "(rose OR rosé)",
+}
+
+
+def _expand_accent_twins(keywords: str) -> str:
+    """Expands common folded beverage terms to match both unaccented and accented Google Places venues."""
+    if not keywords:
+        return ""
+    pattern = re.compile(r"\b(" + "|".join(_ACCENT_TWINS.keys()) + r")\b", re.IGNORECASE)
+    return pattern.sub(lambda m: _ACCENT_TWINS[m.group(0).lower()], keywords)
+
+
 def build_smart_search_query(keywords: str) -> str:
     """Builds a category-aware query supporting specialty coffee, tea houses, craft cocktail bars, and zero-proof spots."""
     kw = (keywords or "").strip()
     kw_lower = kw.lower()
+    expanded_kw = _expand_accent_twins(kw)
     if any(w in kw_lower for w in MOCKTAIL_KEYWORDS):
-        return f"{kw} mocktails OR zero-proof OR lounge OR cocktail bar".strip()
+        return f"{expanded_kw} mocktails OR zero-proof OR lounge OR cocktail bar".strip()
     if any(w in kw_lower for w in COCKTAIL_KEYWORDS):
-        return f"{kw} cocktail bar OR speakeasy OR lounge OR bar".strip()
+        return f"{expanded_kw} cocktail bar OR speakeasy OR lounge OR bar".strip()
     if any(w in kw_lower for w in TEA_KEYWORDS):
-        return f"{kw} tea house OR matcha bar OR cafe".strip()
+        return f"{expanded_kw} tea house OR matcha bar OR cafe".strip()
     if kw:
-        return f"{kw} specialty cafe OR tea house OR cocktail bar OR zero-proof".strip()
+        return f"{expanded_kw} specialty cafe OR tea house OR cocktail bar OR zero-proof".strip()
     return "specialty coffee OR tea house OR cocktail bar OR mocktails"
 
 
@@ -121,7 +141,7 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
                 "radius": min(radius_m, 50000.0),
             }
         },
-        "maxResultCount": 15,
+        "maxResultCount": 20,
     }
     resp = requests.post(url, json=payload, headers=headers, timeout=10)
     if resp.status_code != 200:
@@ -294,7 +314,7 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
             pass
 
     if collected:
-        return collected[:18]
+        return collected[:30]
 
     try:
         legacy = _search_places_legacy(api_key, search_query, lat, lon)
