@@ -84,6 +84,11 @@ _ACCENT_TWINS = {
     "acai": "(acai OR açaí)",
     "pina": "(pina OR piña)",
     "rose": "(rose OR rosé)",
+    "pena": "(pena OR peña)",
+    "jalapeno": "(jalapeno OR jalapeño)",
+    "frappe": "(frappe OR frappé)",
+    "mate": "(mate OR maté)",
+    "curacao": "(curacao OR curaçao)",
 }
 
 
@@ -220,7 +225,7 @@ def _search_places_legacy(api_key: str, query: str, lat: float, lon: float, radi
     data = resp.json()
 
     results: List[Dict] = []
-    for place in data.get("results", [])[:15]:
+    for place in data.get("results", [])[:20]:
         loc = place.get("geometry", {}).get("location", {})
         p_lat = loc.get("lat")
         p_lon = loc.get("lng")
