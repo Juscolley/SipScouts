@@ -108,9 +108,10 @@ async def search_venues(
 
     # Log event to Supabase analytics (non-blocking, with optional signed-in user_id attribution)
     from app.services.supabase_service import log_search_event
+    from app.services.text_utils import fold_latin_accents
     log_search_event(
-        drink=drink,
-        ingredient=ingredient,
+        drink=fold_latin_accents(drink.strip()),
+        ingredient=fold_latin_accents(ingredient.strip()),
         city=city_name,
         zip_code=zip_code,
         latitude=search_lat,

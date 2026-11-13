@@ -4,6 +4,7 @@ import threading
 import time
 from typing import Dict, List, Optional, Tuple
 import requests
+from app.services.text_utils import fold_latin_accents
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ def _run_osm_keyword_search(keywords: str, lat: float, lon: float) -> List[Dict]
     if not spots:
         return []
 
-    kw_lower = keywords.strip().lower()
+    kw_lower = fold_latin_accents(keywords).strip().lower()
     is_bar_query = any(
         w in kw_lower
         for w in (
@@ -179,7 +180,7 @@ def _run_osm_keyword_search(keywords: str, lat: float, lon: float) -> List[Dict]
     fallback: List[Dict] = []
 
     for s in spots:
-        searchable = f"{s['name']} {s.get('cuisine', '')} {s.get('drink_tags', '')}".lower()
+        searchable = fold_latin_accents(f"{s['name']} {s.get('cuisine', '')} {s.get('drink_tags', '')}").lower()
         tag_list = ["OpenStreetMap"]
         if keywords:
             tag_list.append(keywords)

@@ -10,6 +10,7 @@ import httpx
 from app import models
 from app.database import SessionLocal
 from app.services.distance import calculate_haversine_distance
+from app.services.text_utils import fold_latin_accents
 from app.services import (
     google_scraper,
     yelp_scraper,
@@ -192,14 +193,15 @@ def _load_cached_db_venues(keyword: str, lat: float, lon: float, radius_km: floa
     results: List[Dict] = []
     try:
         cafes = db.query(models.Cafe).all()
-        kw_lower = keyword.lower().strip()
+        kw_lower = fold_latin_accents(keyword).lower().strip()
         for c in cafes:
             if c.latitude is None or c.longitude is None:
                 continue
             dist_miles = calculate_haversine_distance(lat, lon, c.latitude, c.longitude)
             if dist_miles <= radius_km * 0.621371:
-                found = (c.found_drinks or "").lower()
-                if not kw_lower or kw_lower in found or kw_lower in (c.name or "").lower():
+                found = fold_latin_accents(c.found_drinks or "").lower()
+                cname = fold_latin_accents(c.name or "").lower()
+                if not kw_lower or kw_lower in found or kw_lower in cname:
                     results.append(
                         {
                             "id": f"db-{c.id}",
@@ -230,7 +232,8 @@ async def orchestrate_search(
     Any scraper finishing after the window is NOT dropped — its results are saved in the
     background to the database and in-memory cache so no hidden gem is ever lost.
     """
-    keywords = " ".join(p.strip() for p in (drink, ingredient) if p and p.strip()).strip()
+    raw_keywords = " ".join(p.strip() for p in (drink, ingredient) if p and p.strip()).strip()
+    keywords = fold_latin_accents(raw_keywords)
     cache_key = (keywords.lower(), round(lat, 2), round(lon, 2))
 
     now = time.time()
