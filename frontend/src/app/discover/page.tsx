@@ -37,17 +37,6 @@ interface MemberProfileSummary {
 
 const SEARCH_STORAGE_KEY = 'sipscouts_last_search_v1'
 
-const TRENDING_CRAVINGS: Array<{ label: string; drink: string; ingredient: string }> = [
-  { label: '🍵 Pistachio Matcha', drink: 'Matcha Latte', ingredient: 'Pistachio' },
-  { label: '🍸 Espresso Martini', drink: 'Espresso Martini', ingredient: '' },
-  { label: '🍹 Phony Negroni', drink: 'Phony Negroni', ingredient: 'Zero-Proof' },
-  { label: '🌿 Seedlip Botanical', drink: 'Mocktail', ingredient: 'Seedlip' },
-  { label: '☕ Cardamom Latte', drink: 'Latte', ingredient: 'Cardamom' },
-  { label: '🍋 Yuzu Spritz', drink: 'Spritz', ingredient: 'Yuzu' },
-  { label: '🥃 Mezcal Negroni', drink: 'Negroni', ingredient: 'Mezcal' },
-  { label: '🫖 Hojicha Latte', drink: 'Hojicha Latte', ingredient: '' },
-]
-
 function extractIgHandle(url?: string | null): string {
   if (!url) return ''
   try {
@@ -663,7 +652,7 @@ export default function DiscoverPage() {
           style={{
             maxWidth: 720,
             margin: '0 auto',
-            padding: '0 1.5rem 0.85rem',
+            padding: '0 1.5rem 0.75rem',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -673,121 +662,49 @@ export default function DiscoverPage() {
         >
           <InstallAppButton />
           <NotificationBell />
+        </div>
+
+        {/* Prominent Share SipScouts CTA */}
+        <div
+          style={{
+            maxWidth: 720,
+            margin: '0 auto',
+            padding: '0 1.5rem 1.35rem',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
           <button
             type="button"
             onClick={handleShareApp}
             style={{
-              padding: '0.5rem 1.05rem',
+              padding: '0.75rem 1.65rem',
               borderRadius: 999,
-              fontSize: '0.82rem',
-              fontWeight: 700,
+              fontSize: '0.98rem',
+              fontWeight: 800,
+              letterSpacing: '0.01em',
               fontFamily: 'Inter, sans-serif',
-              background: appShareCopied ? 'var(--primary)' : 'rgba(255, 255, 255, 0.92)',
-              border: '1.5px solid var(--primary)',
-              color: appShareCopied ? '#fff' : 'var(--text-main)',
-              boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+              background: appShareCopied
+                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                : 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)',
+              border: appShareCopied
+                ? '1.5px solid rgba(167, 243, 208, 0.85)'
+                : '1.5px solid rgba(254, 240, 138, 0.8)',
+              color: '#FFFFFF',
+              boxShadow: appShareCopied
+                ? '0 6px 20px rgba(16, 185, 129, 0.4)'
+                : '0 6px 22px rgba(234, 88, 12, 0.42)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.4rem',
+              gap: '0.5rem',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             }}
             title="Share SipScouts with a friend"
           >
             {appShareCopied ? '✅ App Link Copied!' : '📲 Share SipScouts'}
           </button>
-        </div>
-
-        {/* Core Craving Categories: Coffee, Tea, Cocktails, Zero-Proof */}
-        <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 0.65rem', textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {[
-              { label: '☕ Specialty Coffee', drink: 'Specialty Coffee', ingredient: '' },
-              { label: '🍵 Matcha & Tea', drink: 'Matcha', ingredient: '' },
-              { label: '🍸 Craft Cocktails', drink: 'Cocktail', ingredient: '' },
-              { label: '🍹 Zero-Proof / Mocktails', drink: 'Mocktail', ingredient: 'Zero-Proof' },
-            ].map(cat => (
-              <button
-                key={cat.label}
-                type="button"
-                onClick={() => {
-                  setDrink(cat.drink)
-                  setIngredient(cat.ingredient)
-                  executeSearch({
-                    drinkVal: cat.drink,
-                    ingredientVal: cat.ingredient,
-                    locationVal: locationInput.trim() || memberProfile?.zip_code?.trim() || '',
-                  })
-                }}
-                style={{
-                  minBlockSize: 36,
-                  padding: '0.4rem 0.95rem',
-                  borderRadius: 99,
-                  border: drink === cat.drink ? '1.5px solid #E2725B' : '1px solid rgba(255, 255, 255, 0.45)',
-                  background: drink === cat.drink ? 'rgba(226, 114, 91, 0.95)' : 'rgba(255, 255, 255, 0.92)',
-                  backdropFilter: 'blur(8px)',
-                  color: drink === cat.drink ? '#FFFFFF' : '#2C1810',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 1-Tap Trending Cravings Bar (Converts IG Bio Traffic into Immediate Logged Searches) */}
-        <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.15rem', textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.45rem' }}>
-            <span
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                color: 'rgba(255, 240, 228, 0.92)',
-                textShadow: '0 1px 4px rgba(0,0,0,0.45)',
-                marginRight: '0.2rem',
-              }}
-            >
-              🔥 1-Tap Trending:
-            </span>
-            {TRENDING_CRAVINGS.map(item => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() =>
-                  executeSearch({
-                    drinkVal: item.drink,
-                    ingredientVal: item.ingredient,
-                    locationVal: locationInput.trim() || memberProfile?.zip_code?.trim() || '',
-                  })
-                }
-                style={{
-                  minBlockSize: 34,
-                  padding: '0.32rem 0.8rem',
-                  borderRadius: 99,
-                  border: '1px solid rgba(255, 203, 164, 0.55)',
-                  background: 'rgba(42, 24, 16, 0.72)',
-                  backdropFilter: 'blur(6px)',
-                  color: '#FAF3E8',
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.18s ease',
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Returning Signed-In Member 1-Tap Favorites Bar */}
@@ -821,7 +738,7 @@ export default function DiscoverPage() {
                       executeSearch({
                         drinkVal: favDrink,
                         ingredientVal: '',
-                        locationVal: locationInput.trim() || memberProfile.zip_code.trim(),
+                        locationVal: locationInput.trim() || (geo.latitude !== null && geo.longitude !== null ? '' : memberProfile.zip_code.trim()),
                       })
                     }
                     style={{
@@ -847,7 +764,7 @@ export default function DiscoverPage() {
                       executeSearch({
                         drinkVal: '',
                         ingredientVal: favIng,
-                        locationVal: locationInput.trim() || memberProfile.zip_code.trim(),
+                        locationVal: locationInput.trim() || (geo.latitude !== null && geo.longitude !== null ? '' : memberProfile.zip_code.trim()),
                       })
                     }
                     style={{
