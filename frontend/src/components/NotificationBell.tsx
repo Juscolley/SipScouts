@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Bell, AlertTriangle, Loader2, Smartphone, Share, PlusSquare } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 function checkIsIOS() {
@@ -258,6 +259,10 @@ export default function NotificationBell() {
     }
   }
 
+  if (status === 'denied') {
+    return null
+  }
+
   return (
     <>
       {status === 'subscribed' ? (
@@ -267,14 +272,15 @@ export default function NotificationBell() {
           title="Click to turn off push notifications"
           style={{
             fontFamily: 'Inter, sans-serif',
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
             color: '#1a7a42',
             background: 'rgba(255, 255, 255, 0.95)',
             border: '1.5px solid #2ea043',
             borderRadius: 99,
-            padding: '0.65rem 1.25rem',
-            boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+            minHeight: 44,
+            padding: '0.55rem 1.15rem',
+            boxShadow: '0 4px 14px rgba(74, 46, 32, 0.12)',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
@@ -282,38 +288,11 @@ export default function NotificationBell() {
             transition: 'all 0.15s ease',
           }}
         >
-          <span style={{ fontSize: '1rem' }}>🔔</span>
+          <Bell size={16} />
           <span>Alerts ON</span>
           <span style={{ fontSize: '0.72rem', color: '#1a7a42', opacity: 0.75, marginLeft: '0.15rem' }}>
             (Tap to Mute)
           </span>
-        </button>
-      ) : status === 'denied' ? (
-        <button
-          onClick={() =>
-            alert(
-              'Notifications are currently blocked. To enable, open your device Settings > Notifications > SipScouts (or Safari) and switch Allow Notifications to ON.'
-            )
-          }
-          className="warm-btn-ghost"
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            color: 'var(--text-muted)',
-            background: 'rgba(255, 255, 255, 0.85)',
-            border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 99,
-            padding: '0.65rem 1.25rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            cursor: 'pointer',
-          }}
-          title="Click for instructions to unblock in Settings"
-        >
-          <span>🔕</span>
-          <span>Alerts Blocked</span>
         </button>
       ) : status === 'error' ? (
         <span
@@ -325,13 +304,14 @@ export default function NotificationBell() {
             background: 'rgba(255, 235, 235, 0.95)',
             border: '1.5px solid #e74c3c',
             borderRadius: 99,
-            padding: '0.65rem 1.25rem',
+            minHeight: 44,
+            padding: '0.55rem 1.15rem',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.4rem',
           }}
         >
-          ⚠️ {errorMessage || 'Failed — retry'}
+          <AlertTriangle size={15} /> {errorMessage || 'Failed — retry'}
         </span>
       ) : (
         <button
@@ -339,14 +319,15 @@ export default function NotificationBell() {
           disabled={status === 'loading'}
           className="warm-btn-ghost"
           style={{
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
-            padding: '0.65rem 1.25rem',
+            minHeight: 44,
+            padding: '0.55rem 1.15rem',
             borderRadius: 99,
             background: 'rgba(255, 255, 255, 0.92)',
-            border: '1.5px solid var(--primary)',
+            border: '1.5px solid rgba(255, 255, 255, 0.65)',
             color: 'var(--text-main)',
-            boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+            boxShadow: '0 4px 14px rgba(28, 14, 8, 0.16)',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
@@ -354,7 +335,17 @@ export default function NotificationBell() {
             gap: '0.4rem',
           }}
         >
-          {status === 'loading' ? '⏳ Updating…' : '🔔 Notify Me'}
+          {status === 'loading' ? (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              <span>Updating…</span>
+            </>
+          ) : (
+            <>
+              <Bell size={15} />
+              <span>Notify Me</span>
+            </>
+          )}
         </button>
       )}
 

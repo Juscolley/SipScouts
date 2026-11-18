@@ -2,6 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import {
+  Search,
+  MapPin,
+  Navigation,
+  Bookmark,
+  MoreHorizontal,
+  Phone,
+  AtSign,
+  Globe,
+  Share2,
+  Sparkles,
+  Lightbulb,
+  Menu,
+  X,
+  Check,
+  Map as MapIcon,
+  Coffee,
+  Wine,
+  Leaf,
+  GlassWater,
+  Star,
+  ExternalLink,
+  Copy,
+  UserPlus,
+  Camera,
+} from 'lucide-react'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { createClient } from '@/lib/supabase'
@@ -16,16 +42,51 @@ interface Venue {
   id: string
   name: string
   address: string
-  type: 'cafe' | 'bar'
+  type: 'cafe' | 'bar' | 'tea_house' | 'zero_proof' | string
   lat: number
   lng: number
   tags: string[]
+  rating?: number | null
   phone?: string | null
   open_now?: boolean | null
   website?: string | null
   instagram_url?: string | null
+  photo_url?: string | null
+  evidence?: string | null
   match_tier?: 'exact' | 'potential'
   distanceKm?: number
+}
+
+function getDirectionsUrl(v: Venue): string {
+  const dest =
+    v.address && v.address !== 'Nearby' && v.address !== 'Local Neighborhood Spot'
+      ? `${v.name}, ${v.address}`
+      : `${v.lat},${v.lng}`
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`
+}
+
+function prefersMiles(): boolean {
+  if (typeof navigator === 'undefined') return true
+  const lang = (navigator.language || 'en-US').toLowerCase()
+  return lang === 'en-us' || lang.endsWith('-us') || lang === 'en-lr' || lang === 'en-mm'
+}
+
+function formatDistance(km: number): string {
+  if (prefersMiles()) {
+    const miles = km * 0.621371
+    if (miles < 0.1) return `${Math.max(50, Math.round(miles * 5280))} ft away`
+    return `${miles.toFixed(1)} mi away`
+  }
+  if (km < 1) return `${Math.round(km * 1000)} m away`
+  return `${km.toFixed(1)} km away`
+}
+
+function getVenueCategoryInfo(type: string): { label: string; kind: 'tea' | 'bar' | 'zero' | 'cafe' } {
+  const t = (type || 'cafe').toLowerCase()
+  if (t === 'tea_house') return { label: 'Tea House', kind: 'tea' }
+  if (t === 'bar') return { label: 'Bar', kind: 'bar' }
+  if (t === 'zero_proof') return { label: 'Zero-Proof', kind: 'zero' }
+  return { label: 'Café', kind: 'cafe' }
 }
 
 interface MemberProfileSummary {
@@ -73,6 +134,10 @@ export default function DiscoverPage() {
   const [storyCaptionCopied, setStoryCaptionCopied] = useState(false)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [feedbackDefaultWish, setFeedbackDefaultWish] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showMap, setShowMap] = useState(true)
+  const [openMoreVenueId, setOpenMoreVenueId] = useState<string | null>(null)
+  const [failedPhotos, setFailedPhotos] = useState<Record<string, boolean>>({})
 
   const geo = useGeolocation()
   const { isBookmarked, toggle, isLoggedIn, userId, isAdmin } = useBookmarks()
@@ -449,13 +514,9 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fcf6f0' }}>
-      {/* Fixed hero background */}
-      <div className="hero-bg" />
-      <div className="hero-overlay" />
-
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
-      <header className="warm-header" style={{ position: 'relative', zIndex: 30 }}>
+      <header className="warm-header" style={{ position: 'sticky', top: 0, zIndex: 40 }}>
         <div className="warm-header-inner">
           <a href="/discover" className="logo">
             <img src="/sipscouts-logo.png" alt="SipScouts" className="logo-mark" />
@@ -474,7 +535,8 @@ export default function DiscoverPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                padding: '0.2rem 0.4rem',
+                padding: '0.25rem 0.45rem',
+                minHeight: 40,
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '0.85rem',
                 fontWeight: 600,
@@ -482,23 +544,26 @@ export default function DiscoverPage() {
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.25rem',
+                gap: '0.35rem',
               }}
               title="What's one drink or feature you wish SipScouts had?"
             >
-              💡 Wish a Drink
+              <Lightbulb size={15} />
+              <span>Wish a Drink</span>
             </button>
             <a
               href="https://www.instagram.com/sipscoutsapp/"
               target="_blank"
               rel="noopener noreferrer"
               title="Follow @SipScoutsApp on Instagram"
+              style={{ gap: '0.3rem' }}
             >
-              📸 @SipScoutsApp
+              <AtSign size={15} />
+              <span>@SipScoutsApp</span>
             </a>
-            {isAdmin && <a href="/merchant">🔒 B2B Dashboard</a>}
+            {isAdmin && <a href="/merchant">B2B Dashboard</a>}
             {isLoggedIn ? (
-              <a href="/profile" className="nav-btn">My Profile ✓</a>
+              <a href="/profile" className="nav-btn">My Profile</a>
             ) : (
               <>
                 <a href="/login?mode=signin">Sign In</a>
@@ -506,206 +571,300 @@ export default function DiscoverPage() {
               </>
             )}
           </nav>
-        </div>
-      </header>
 
-      {/* Hero + Search */}
-      <div style={{ position: 'relative', zIndex: 10 }}>
-        <section style={{ maxWidth: 720, margin: '0 auto', padding: '2.25rem 1.5rem 1.5rem', textAlign: 'center' }}>
-          <img
-            src="/sipscouts-logo.png"
-            alt="SipScouts emblem"
-            className="hero-logo-badge"
-          />
-          <h1 className="hero-title">
-            Find your next perfect sip
-          </h1>
-          <p className="hero-sub">
-            Coffee, tea, craft cocktails, or zero-proof mocktails — search by drink or ingredient and we&apos;ll surface hidden gems sorted by distance.
-          </p>
-          {geo.source === 'gps' && (
-            <p className="hero-note">📍 Currently using your exact GPS location</p>
-          )}
-          {geo.source === 'ip' && (
-            <p className="hero-note">
-              📍 Near {geo.cityLabel || 'your area'}{' '}
-              <button
-                type="button"
-                onClick={geo.requestLocation}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  border: '1px solid rgba(255,255,255,0.45)',
-                  color: '#fff',
-                  borderRadius: 99,
-                  padding: '0.15rem 0.6rem',
-                  fontSize: '0.75rem',
-                  marginLeft: '0.35rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Use Exact GPS
-              </button>
-            </p>
-          )}
-          {!geo.latitude && !geo.loading && (
-            <p className="hero-note">
-              <button
-                type="button"
-                onClick={geo.requestLocation}
-                style={{
-                  background: 'rgba(255,255,255,0.22)',
-                  border: '1px solid rgba(255,255,255,0.5)',
-                  color: '#fff',
-                  borderRadius: 99,
-                  padding: '0.25rem 0.75rem',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                📍 Tap to Enable Location (or enter Zip / City below)
-              </button>
-            </p>
-          )}
-        </section>
-
-        <form
-          onSubmit={handleSearch}
-          autoComplete="off"
-          style={{ maxWidth: 820, margin: '0 auto', padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
-        >
-          <div style={{ flex: '1 1 190px' }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
-            <input
-              className="warm-input"
-              type="text"
-              name="sipscouts_drink"
-              value={drink}
-              onChange={e => setDrink(e.target.value)}
-              placeholder="e.g. Oat Latte, Matcha, Phony Negroni…"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </div>
-          <div style={{ flex: '1 1 190px' }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
-            <input
-              className="warm-input"
-              type="text"
-              name="sipscouts_ingredient"
-              value={ingredient}
-              onChange={e => setIngredient(e.target.value)}
-              placeholder="e.g. Cardamom, Yuzu, Seedlip, Mezcal…"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </div>
-          <div style={{ flex: '1 1 170px' }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
-            <input
-              className="warm-input"
-              type="text"
-              name="sipscouts_location"
-              value={locationInput}
-              onChange={e => setLocationInput(e.target.value)}
-              placeholder="Type Zip or City"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            <span style={{ fontSize: '0.68rem', color: 'rgba(255, 240, 228, 0.88)', textShadow: '0 1px 3px rgba(0,0,0,0.5)', marginTop: '0.28rem', display: 'block', fontFamily: 'Inter, sans-serif' }}>
-              Leave blank to scout near your current location
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flex: '1 1 180px' }}>
-            <button type="submit" className="warm-btn" disabled={loading} style={{ flex: 1 }}>
-              {loading ? '🔍 Searching…' : '🔍 Search'}
-            </button>
-            {hasActiveSearchOrInput && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                title="Clear search fields and results"
-                style={{
-                  padding: '0.82rem 0.95rem',
-                  borderRadius: 14,
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '1.5px solid rgba(74, 46, 32, 0.25)',
-                  color: 'var(--text-main)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 4px 12px rgba(74, 46, 32, 0.12)',
-                }}
-              >
-                ✕ Clear
-              </button>
-            )}
-          </div>
-        </form>
-
-        {/* Prominent Mobile-First Action Row directly below Search */}
-        <div
-          style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            padding: '0 1.5rem 0.75rem',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          <InstallAppButton />
-          <NotificationBell />
-        </div>
-
-        {/* Prominent Share SipScouts CTA */}
-        <div
-          style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            padding: '0 1.5rem 1.35rem',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
+          {/* Mobile Hamburger Button (44x44 tap target) */}
           <button
             type="button"
-            onClick={handleShareApp}
-            style={{
-              padding: '0.75rem 1.65rem',
-              borderRadius: 999,
-              fontSize: '0.98rem',
-              fontWeight: 800,
-              letterSpacing: '0.01em',
-              fontFamily: 'Inter, sans-serif',
-              background: appShareCopied
-                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)',
-              border: appShareCopied
-                ? '1.5px solid rgba(167, 243, 208, 0.85)'
-                : '1.5px solid rgba(254, 240, 138, 0.8)',
-              color: '#FFFFFF',
-              boxShadow: appShareCopied
-                ? '0 6px 20px rgba(16, 185, 129, 0.4)'
-                : '0 6px 22px rgba(234, 88, 12, 0.42)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-            }}
-            title="Share SipScouts with a friend"
+            className="mobile-menu-btn"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen(prev => !prev)}
           >
-            {appShareCopied ? '✅ App Link Copied!' : '📲 Share SipScouts'}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
+
+        {/* Mobile Nav Drawer */}
+        {mobileMenuOpen && (
+          <nav className="mobile-nav-drawer" aria-label="Mobile Navigation">
+            <a href="/discover" onClick={() => setMobileMenuOpen(false)}>
+              <Search size={17} /> Discover
+            </a>
+            <a href="/bookmarks" onClick={() => setMobileMenuOpen(false)}>
+              <Bookmark size={17} /> Saved Spots
+            </a>
+            <a href="/profile" onClick={() => setMobileMenuOpen(false)}>
+              <Sparkles size={17} /> Profile &amp; Favorites
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
+                setFeedbackModalOpen(true)
+              }}
+            >
+              <Lightbulb size={17} /> Wish a Drink or Feature
+            </button>
+            <a
+              href="https://www.instagram.com/sipscoutsapp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <AtSign size={17} /> @SipScoutsApp
+            </a>
+            {isAdmin && (
+              <a href="/merchant" onClick={() => setMobileMenuOpen(false)}>
+                B2B Dashboard
+              </a>
+            )}
+            {!isLoggedIn && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
+                <a
+                  href="/login?mode=signin"
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    background: '#fff',
+                  }}
+                >
+                  Sign In
+                </a>
+                <a
+                  href="/login?mode=join"
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    borderRadius: 10,
+                  }}
+                >
+                  Join Free
+                </a>
+              </div>
+            )}
+          </nav>
+        )}
+      </header>
+
+      {/* Top Hero + Search Banner (clean neutral background below for results) */}
+      <div className="hero-section-wrap">
+        <div className="hero-bg" />
+        <div className="hero-overlay" />
+        <div style={{ position: 'relative', zIndex: 10 }}>
+          <section style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1.25rem 1.25rem', textAlign: 'center' }}>
+            <img
+              src="/sipscouts-logo.png"
+              alt="SipScouts emblem"
+              className="hero-logo-badge"
+            />
+            <h1 className="hero-title">
+              Find your next perfect sip
+            </h1>
+            <p className="hero-sub">
+              Coffee, tea, craft cocktails, or zero-proof mocktails — search by drink or ingredient and we&apos;ll surface hidden gems sorted by distance.
+            </p>
+            {geo.source === 'gps' && (
+              <p className="hero-note" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center' }}>
+                <MapPin size={14} /> Currently using your exact GPS location
+              </p>
+            )}
+            {geo.source === 'ip' && (
+              <p className="hero-note" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <MapPin size={14} />
+                <span>Near {geo.cityLabel || 'your area'}</span>
+                <button
+                  type="button"
+                  onClick={geo.requestLocation}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    border: '1px solid rgba(255,255,255,0.45)',
+                    color: '#fff',
+                    borderRadius: 99,
+                    minHeight: 32,
+                    padding: '0.2rem 0.7rem',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Use Exact GPS
+                </button>
+              </p>
+            )}
+            {!geo.latitude && !geo.loading && (
+              <p className="hero-note">
+                <button
+                  type="button"
+                  onClick={geo.requestLocation}
+                  style={{
+                    background: 'rgba(255,255,255,0.22)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    color: '#fff',
+                    borderRadius: 99,
+                    minHeight: 38,
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <MapPin size={14} /> Tap to Enable Location (or enter Zip / City below)
+                </button>
+              </p>
+            )}
+          </section>
+
+          <form
+            onSubmit={handleSearch}
+            autoComplete="off"
+            style={{ maxWidth: 880, margin: '0 auto', padding: '0 1.25rem 1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}
+          >
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.92)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Drink</label>
+              <input
+                className="warm-input"
+                type="text"
+                name="sipscouts_drink"
+                value={drink}
+                onChange={e => setDrink(e.target.value)}
+                placeholder="e.g. Matcha, Oat Latte"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.92)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Ingredient</label>
+              <input
+                className="warm-input"
+                type="text"
+                name="sipscouts_ingredient"
+                value={ingredient}
+                onChange={e => setIngredient(e.target.value)}
+                placeholder="e.g. Pistachio, Yuzu"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+            <div style={{ flex: '1 1 170px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255, 240, 228, 0.92)', textShadow: '0 1px 4px rgba(0,0,0,0.45)', marginBottom: '0.4rem', fontFamily: 'Inter, sans-serif' }}>Near (Zip or City)</label>
+              <input
+                className="warm-input"
+                type="text"
+                name="sipscouts_location"
+                value={locationInput}
+                onChange={e => setLocationInput(e.target.value)}
+                placeholder="Type Zip or City"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <span style={{ fontSize: '0.7rem', color: 'rgba(255, 240, 228, 0.9)', textShadow: '0 1px 3px rgba(0,0,0,0.5)', marginTop: '0.3rem', display: 'block', fontFamily: 'Inter, sans-serif' }}>
+                Leave blank to scout near your location
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '0 1 auto', minWidth: 165, paddingTop: '1.42rem' }}>
+              <button
+                type="submit"
+                className="warm-btn"
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  minHeight: 46,
+                  padding: '0.7rem 1.35rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.45rem',
+                }}
+              >
+                <Search size={16} />
+                <span>{loading ? 'Searching…' : 'Search'}</span>
+              </button>
+              {hasActiveSearchOrInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  title="Clear search fields and results"
+                  aria-label="Clear search"
+                  style={{
+                    minHeight: 46,
+                    minWidth: 46,
+                    padding: '0 0.85rem',
+                    borderRadius: 12,
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    fontFamily: 'Inter, sans-serif',
+                    background: 'rgba(255, 255, 255, 0.92)',
+                    border: '1px solid rgba(74, 46, 32, 0.2)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Secondary Utility Row (subdued so Search stays the single bold CTA) */}
+          <div
+            style={{
+              maxWidth: 720,
+              margin: '0 auto',
+              padding: '0 1.25rem 1.75rem',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '0.65rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <InstallAppButton />
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={handleShareApp}
+              className="warm-btn-ghost"
+              style={{
+                minHeight: 44,
+                padding: '0.55rem 1.15rem',
+                borderRadius: 99,
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                fontFamily: 'Inter, sans-serif',
+                background: appShareCopied ? '#1a7a42' : 'rgba(255, 255, 255, 0.92)',
+                border: appShareCopied ? '1.5px solid #1a7a42' : '1.5px solid rgba(255, 255, 255, 0.65)',
+                color: appShareCopied ? '#FFFFFF' : 'var(--text-main)',
+                boxShadow: '0 4px 14px rgba(28, 14, 8, 0.16)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+              }}
+              title="Share SipScouts with a friend"
+            >
+              {appShareCopied ? <Check size={15} /> : <Share2 size={15} />}
+              <span>{appShareCopied ? 'App Link Copied!' : 'Share SipScouts'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area on Clean Neutral Background */}
+      <div style={{ position: 'relative', zIndex: 10, paddingTop: '1.25rem' }}>
 
         {/* Returning Signed-In Member 1-Tap Favorites Bar */}
         {isLoggedIn && memberProfile && (memberProfile.favorite_drinks.length > 0 || memberProfile.favorite_ingredients.length > 0) && (
@@ -846,10 +1005,12 @@ export default function DiscoverPage() {
 
         {/* Results */}
         {searched && (
-          <section style={{ maxWidth: 1024, margin: '0 auto', padding: '0 1.5rem 4rem' }}>
-            <div style={{ height: 280, borderRadius: 20, overflow: 'hidden', marginBottom: '1.5rem', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(74,46,32,0.1)' }}>
-              <VenueMap venues={venues} userLat={(searchCenter?.lat ?? geo.latitude) ?? undefined} userLng={(searchCenter?.lng ?? geo.longitude) ?? undefined} />
-            </div>
+          <section style={{ maxWidth: 1024, margin: '0 auto', padding: '0 1.25rem 4rem' }}>
+            {showMap && (
+              <div style={{ height: 280, borderRadius: 20, overflow: 'hidden', marginBottom: '1.25rem', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+                <VenueMap venues={venues} userLat={(searchCenter?.lat ?? geo.latitude) ?? undefined} userLng={(searchCenter?.lng ?? geo.longitude) ?? undefined} />
+              </div>
+            )}
 
             {loading ? (
               <div className="glass" role="status" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem', textAlign: 'center', gap: '1rem' }}>
@@ -896,216 +1057,227 @@ export default function DiscoverPage() {
                 const exactMatches = venues.filter(v => v.match_tier !== 'potential' && !v.tags.includes('Potential Match'))
                 const potentialMatches = venues.filter(v => v.match_tier === 'potential' || v.tags.includes('Potential Match'))
 
-                const renderVenueCard = (v: Venue, isPotential: boolean) => (
-                  <div
-                    key={v.id}
-                    className="warm-card glass"
-                    style={{ background: 'rgba(250, 241, 230, 0.94)' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
-                      <div>
-                        <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.1rem', color: 'var(--text-main)' }}>{v.name}</h3>
-                        {v.distanceKm !== undefined && (
-                          <p className="distance">
-                            {v.distanceKm < 1 ? `${Math.round(v.distanceKm * 1000)}m` : `${v.distanceKm.toFixed(1)} km`} · {(v.distanceKm * 0.621371).toFixed(1)} mi away
-                          </p>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isLoggedIn) {
-                              toggle({ name: v.name, address: v.address, type: v.type, lat: v.lat, lng: v.lng })
-                            } else {
-                              setProfilePromptVenue(v.name)
-                            }
-                          }}
-                          style={{
-                            minBlockSize: 34,
-                            background: isBookmarked(v.name) ? 'var(--primary)' : '#ffffff',
-                            border: '1.5px solid var(--primary)',
-                            borderRadius: 10,
-                            padding: '0.3rem 0.72rem',
-                            cursor: 'pointer',
-                            fontSize: '0.78rem',
-                            fontFamily: 'Inter, sans-serif',
-                            fontWeight: 700,
-                            color: isBookmarked(v.name) ? '#ffffff' : 'var(--primary)',
-                            boxShadow: '0 2px 0 rgba(226, 114, 91, 0.28), 0 4px 10px rgba(74, 46, 32, 0.12)',
-                            transition: 'all 0.2s',
-                          }}
-                          title={isBookmarked(v.name) ? 'Remove from Saved' : 'Save this location'}
-                        >
-                          {isBookmarked(v.name) ? '🔖 Saved ✓' : '🔖 Save'}
-                        </button>
-                      </div>
-                    </div>
+                const renderVenueCard = (v: Venue, isPotential: boolean) => {
+                  const cat = getVenueCategoryInfo(v.type)
+                  const starTag = v.tags.find(t => t.startsWith('★'))
+                  const displayRating = v.rating ? `${v.rating}` : starTag ? starTag.replace(/^★\s*/, '') : null
+                  const hasPhoto = Boolean(v.photo_url && !failedPhotos[v.id])
+                  const isMoreOpen = openMoreVenueId === v.id
+                  const isVerifiedIg = Boolean(v.instagram_url)
+                  const igHref =
+                    v.instagram_url ||
+                    `https://www.google.com/search?q=${encodeURIComponent(v.name + (v.address ? ' ' + v.address : '') + ' instagram')}`
 
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{v.address}</p>
+                  const CategoryIcon =
+                    cat.kind === 'tea'
+                      ? Leaf
+                      : cat.kind === 'bar'
+                      ? Wine
+                      : cat.kind === 'zero'
+                      ? GlassWater
+                      : Coffee
 
-                    {/* Static Status Badges Row (Flat, Non-Clickable Info Labels) */}
+                  return (
                     <div
+                      key={v.id}
+                      className="warm-card"
                       style={{
-                        marginTop: '0.6rem',
+                        background: '#FFFFFF',
+                        padding: 0,
+                        overflow: 'hidden',
                         display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: '0.4rem',
+                        flexDirection: 'column',
+                        boxShadow: '0 4px 18px rgba(46, 29, 20, 0.06)',
                       }}
                     >
-                      <span
+                      {/* Card Photo / Category Banner */}
+                      <div
                         style={{
-                          fontSize: '0.69rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          padding: '0.16rem 0.5rem',
-                          borderRadius: 5,
-                          background: 'rgba(74, 46, 32, 0.07)',
-                          color: 'var(--text-light)',
-                          fontFamily: 'Inter, sans-serif',
-                          cursor: 'default',
+                          position: 'relative',
+                          height: hasPhoto ? 156 : 76,
+                          background:
+                            cat.kind === 'tea'
+                              ? 'linear-gradient(135deg, #E8F0E6 0%, #D4E4CF 100%)'
+                              : cat.kind === 'bar'
+                              ? 'linear-gradient(135deg, #F3E6E2 0%, #E7D2CB 100%)'
+                              : cat.kind === 'zero'
+                              ? 'linear-gradient(135deg, #E6EEF2 0%, #D0E1EB 100%)'
+                              : 'linear-gradient(135deg, #F6EDE4 0%, #EADBC9 100%)',
+                          overflow: 'hidden',
                         }}
                       >
-                        {v.type === 'zero_proof' ? '🍹 Zero-Proof' : v.type === 'bar' ? '🍸 Bar' : '☕ Cafe'}
-                      </span>
+                        {hasPhoto ? (
+                          <img
+                            src={v.photo_url!}
+                            alt={v.name}
+                            loading="lazy"
+                            onError={() => setFailedPhotos(prev => ({ ...prev, [v.id]: true }))}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--text-light)',
+                              opacity: 0.45,
+                            }}
+                          >
+                            <CategoryIcon size={28} />
+                          </div>
+                        )}
 
-                      {isPotential ? (
-                        <span
+                        {/* Category & Match Tier Pill Overlay */}
+                        <div
                           style={{
-                            fontSize: '0.69rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            padding: '0.16rem 0.5rem',
-                            borderRadius: 5,
-                            background: 'rgba(74, 46, 32, 0.07)',
-                            color: 'var(--text-light)',
-                            fontFamily: 'Inter, sans-serif',
-                            cursor: 'default',
+                            position: 'absolute',
+                            top: 10,
+                            left: 10,
+                            display: 'flex',
+                            gap: '0.35rem',
+                            flexWrap: 'wrap',
                           }}
                         >
-                          ✨ Potential Match
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: '0.69rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            padding: '0.16rem 0.5rem',
-                            borderRadius: 5,
-                            background: 'rgba(226, 114, 91, 0.14)',
-                            color: 'var(--primary)',
-                            fontFamily: 'Inter, sans-serif',
-                            cursor: 'default',
-                          }}
-                        >
-                          🎯 Exact Match
-                        </span>
-                      )}
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              padding: '0.24rem 0.55rem',
+                              borderRadius: 99,
+                              background: 'rgba(255, 255, 255, 0.94)',
+                              color: 'var(--text-main)',
+                              fontFamily: 'Inter, sans-serif',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                            }}
+                          >
+                            <CategoryIcon size={12} />
+                            {cat.label}
+                          </span>
+                          {!isPotential && (
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                                padding: '0.24rem 0.55rem',
+                                borderRadius: 99,
+                                background: 'rgba(226, 114, 91, 0.95)',
+                                color: '#fff',
+                                fontFamily: 'Inter, sans-serif',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                              }}
+                            >
+                              Exact Match
+                            </span>
+                          )}
+                        </div>
 
-                      {v.open_now === true && (
-                        <span
-                          style={{
-                            fontSize: '0.69rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            padding: '0.16rem 0.5rem',
-                            borderRadius: 5,
-                            background: 'rgba(46, 125, 50, 0.12)',
-                            color: '#2e7d32',
-                            fontFamily: 'Inter, sans-serif',
-                            cursor: 'default',
-                          }}
-                        >
-                          ● Open Now
-                        </span>
-                      )}
-                      {v.open_now === false && (
-                        <span
-                          style={{
-                            fontSize: '0.69rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                            padding: '0.16rem 0.5rem',
-                            borderRadius: 5,
-                            background: 'rgba(169, 68, 66, 0.1)',
-                            color: '#a94442',
-                            fontFamily: 'Inter, sans-serif',
-                            cursor: 'default',
-                          }}
-                        >
-                          ● Closed
-                        </span>
-                      )}
-                    </div>
+                        {displayRating && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 10,
+                              right: 10,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '0.24rem 0.55rem',
+                              borderRadius: 99,
+                              background: 'rgba(255, 255, 255, 0.94)',
+                              color: 'var(--text-main)',
+                              fontFamily: 'Inter, sans-serif',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                            }}
+                          >
+                            <Star size={12} fill="#E2725B" color="#E2725B" />
+                            <span>{displayRating}</span>
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Tactile Clickable Venue Action Buttons Row (Call, Instagram, Menu/Site) */}
-                    <div
-                      style={{
-                        marginTop: '0.6rem',
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                      }}
-                    >
-                      {v.phone && (
-                        <a
-                          href={`tel:${v.phone}`}
-                          onClick={() =>
-                            trackVenueAction({
-                              venue_name: v.name,
-                              venue_address: v.address,
-                              venue_type: v.type,
-                              action_type: 'call',
-                              searched_drink: drink.trim(),
-                              searched_ingredient: ingredient.trim(),
-                              city: geo.cityLabel || locationInput.trim(),
-                              zip_code: locationInput.trim(),
-                              latitude: v.lat,
-                              longitude: v.lng,
-                              user_id: userId,
-                            })
-                          }
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            minBlockSize: 34,
-                            padding: '0.3rem 0.7rem',
-                            borderRadius: 10,
-                            background: '#ffffff',
-                            border: '1.5px solid rgba(74, 46, 32, 0.28)',
-                            boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                            fontSize: '0.76rem',
-                            fontFamily: 'Inter, sans-serif',
-                            fontWeight: 700,
-                            color: 'var(--text-main)',
-                            textDecoration: 'none',
-                            cursor: 'pointer',
-                          }}
-                          title={`Call ${v.phone}`}
-                        >
-                          📞 Call ↗
-                        </a>
-                      )}
+                      {/* Card Body */}
+                      <div style={{ padding: '1rem 1.1rem 1.1rem', display: 'flex', flexDirection: 'column', flex: 1, gap: '0.55rem' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.12rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.25 }}>
+                              {v.name}
+                            </h3>
+                            {v.open_now === true && (
+                              <span
+                                style={{
+                                  flexShrink: 0,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '0.18rem 0.5rem',
+                                  borderRadius: 99,
+                                  background: 'rgba(46, 125, 50, 0.1)',
+                                  color: '#1e6b23',
+                                  fontFamily: 'Inter, sans-serif',
+                                }}
+                              >
+                                Open
+                              </span>
+                            )}
+                            {v.open_now === false && (
+                              <span
+                                style={{
+                                  flexShrink: 0,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '0.18rem 0.5rem',
+                                  borderRadius: 99,
+                                  background: 'rgba(169, 68, 66, 0.1)',
+                                  color: '#9e3331',
+                                  fontFamily: 'Inter, sans-serif',
+                                }}
+                              >
+                                Closed
+                              </span>
+                            )}
+                          </div>
 
-                      {/* Instagram Button: Direct verified profile or targeted search */}
-                      {(() => {
-                        const isVerifiedProfile = Boolean(v.instagram_url)
-                        const igHref =
-                          v.instagram_url ||
-                          `https://www.google.com/search?q=${encodeURIComponent(v.name + (v.address ? ' ' + v.address : '') + ' instagram')}`
+                          {v.distanceKm !== undefined && (
+                            <p className="distance" style={{ fontWeight: 600, fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                              {formatDistance(v.distanceKm)}
+                            </p>
+                          )}
+                          <p style={{ fontSize: '0.84rem', color: 'var(--text-light)', marginTop: '0.15rem', lineHeight: 1.4 }}>
+                            {v.address}
+                          </p>
+                        </div>
 
-                        return (
+                        {/* Match Evidence Proof */}
+                        {v.evidence && (
+                          <div
+                            style={{
+                              fontSize: '0.78rem',
+                              lineHeight: 1.4,
+                              color: 'var(--text-main)',
+                              background: 'rgba(226, 114, 91, 0.08)',
+                              borderLeft: '3px solid var(--primary)',
+                              padding: '0.45rem 0.65rem',
+                              borderRadius: '0 8px 8px 0',
+                              fontFamily: 'Inter, sans-serif',
+                            }}
+                          >
+                            {v.evidence}
+                          </div>
+                        )}
+
+                        {/* Primary Action Row: Directions (Main) + Save + More */}
+                        <div style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           <a
-                            href={igHref}
+                            href={getDirectionsUrl(v)}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() =>
@@ -1113,7 +1285,7 @@ export default function DiscoverPage() {
                                 venue_name: v.name,
                                 venue_address: v.address,
                                 venue_type: v.type,
-                                action_type: 'instagram',
+                                action_type: 'directions',
                                 searched_drink: drink.trim(),
                                 searched_ingredient: ingredient.trim(),
                                 city: geo.cityLabel || locationInput.trim(),
@@ -1124,231 +1296,361 @@ export default function DiscoverPage() {
                               })
                             }
                             style={{
+                              flex: 1,
+                              minHeight: 44,
+                              padding: '0.5rem 0.9rem',
+                              borderRadius: 12,
+                              background: 'var(--primary)',
+                              color: '#FFFFFF',
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '0.86rem',
+                              fontWeight: 700,
+                              textDecoration: 'none',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.25rem',
-                              minBlockSize: 34,
-                              padding: '0.3rem 0.7rem',
-                              borderRadius: 10,
-                              background: '#ffffff',
-                              border: isVerifiedProfile
-                                ? '1.5px solid var(--primary)'
-                                : '1.5px solid rgba(74, 46, 32, 0.28)',
-                              boxShadow: isVerifiedProfile
-                                ? '0 2px 0 rgba(226, 114, 91, 0.24), 0 4px 10px rgba(226, 114, 91, 0.12)'
-                                : '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                              fontSize: '0.76rem',
-                              fontFamily: 'Inter, sans-serif',
-                              fontWeight: 700,
-                              color: isVerifiedProfile ? 'var(--primary)' : 'var(--text-main)',
-                              textDecoration: 'none',
-                              cursor: 'pointer',
+                              justifyContent: 'center',
+                              gap: '0.4rem',
+                              boxShadow: '0 3px 10px rgba(226, 114, 91, 0.28)',
                             }}
-                            title={
-                              isVerifiedProfile
-                                ? `View official @${v.name} profile on Instagram`
-                                : `Search for ${v.name} on Instagram`
-                            }
                           >
-                            📸 {isVerifiedProfile ? 'Instagram ↗' : 'Find IG ↗'}
+                            <Navigation size={15} />
+                            <span>Directions</span>
                           </a>
-                        )
-                      })()}
 
-                      {v.website && (
-                        <a
-                          href={v.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() =>
-                            trackVenueAction({
-                              venue_name: v.name,
-                              venue_address: v.address,
-                              venue_type: v.type,
-                              action_type: 'website',
-                              searched_drink: drink.trim(),
-                              searched_ingredient: ingredient.trim(),
-                              city: geo.cityLabel || locationInput.trim(),
-                              zip_code: locationInput.trim(),
-                              latitude: v.lat,
-                              longitude: v.lng,
-                              user_id: userId,
-                            })
-                          }
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            minBlockSize: 34,
-                            padding: '0.3rem 0.7rem',
-                            borderRadius: 10,
-                            background: '#ffffff',
-                            border: '1.5px solid rgba(74, 46, 32, 0.28)',
-                            boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                            fontSize: '0.76rem',
-                            fontFamily: 'Inter, sans-serif',
-                            fontWeight: 700,
-                            color: 'var(--text-main)',
-                            textDecoration: 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          🌐 Menu / Site ↗
-                        </a>
-                      )}
-                    </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isLoggedIn) {
+                                toggle({ name: v.name, address: v.address, type: v.type, lat: v.lat, lng: v.lng })
+                              } else {
+                                setProfilePromptVenue(v.name)
+                              }
+                            }}
+                            style={{
+                              minHeight: 44,
+                              padding: '0.5rem 0.85rem',
+                              borderRadius: 12,
+                              background: isBookmarked(v.name) ? 'rgba(226, 114, 91, 0.14)' : '#FFFFFF',
+                              border: '1.5px solid var(--border)',
+                              color: isBookmarked(v.name) ? 'var(--primary)' : 'var(--text-main)',
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '0.84rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                            }}
+                            title={isBookmarked(v.name) ? 'Remove from Saved' : 'Save this location'}
+                          >
+                            <Bookmark size={15} fill={isBookmarked(v.name) ? 'currentColor' : 'none'} />
+                            <span>{isBookmarked(v.name) ? 'Saved' : 'Save'}</span>
+                          </button>
 
-                    {v.tags.filter(t => t !== 'Exact Match' && t !== 'Potential Match').length > 0 && (
-                      <div style={{ marginTop: '0.55rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {v.tags
-                          .filter(t => t !== 'Exact Match' && t !== 'Potential Match')
-                          .map(tag => (
-                            <span
-                              key={tag}
+                          <button
+                            type="button"
+                            aria-label={`More actions for ${v.name}`}
+                            aria-expanded={isMoreOpen}
+                            onClick={() => setOpenMoreVenueId(prev => (prev === v.id ? null : v.id))}
+                            style={{
+                              minHeight: 44,
+                              minWidth: 44,
+                              borderRadius: 12,
+                              background: isMoreOpen ? 'rgba(74, 46, 32, 0.08)' : '#FFFFFF',
+                              border: '1.5px solid var(--border)',
+                              color: 'var(--text-main)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            title="Call, Instagram, Menu & Share"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                        </div>
+
+                        {/* Collapsible "More" Menu */}
+                        {isMoreOpen && (
+                          <div
+                            style={{
+                              marginTop: '0.35rem',
+                              padding: '0.6rem',
+                              borderRadius: 12,
+                              background: '#FAF7F2',
+                              border: '1px solid var(--border)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            {v.phone && (
+                              <a
+                                href={`tel:${v.phone}`}
+                                onClick={() =>
+                                  trackVenueAction({
+                                    venue_name: v.name,
+                                    venue_address: v.address,
+                                    venue_type: v.type,
+                                    action_type: 'call',
+                                    searched_drink: drink.trim(),
+                                    searched_ingredient: ingredient.trim(),
+                                    city: geo.cityLabel || locationInput.trim(),
+                                    zip_code: locationInput.trim(),
+                                    latitude: v.lat,
+                                    longitude: v.lng,
+                                    user_id: userId,
+                                  })
+                                }
+                                style={{
+                                  minHeight: 40,
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: 8,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 600,
+                                  color: 'var(--text-main)',
+                                  textDecoration: 'none',
+                                  fontFamily: 'Inter, sans-serif',
+                                }}
+                              >
+                                <Phone size={14} /> Call {v.phone}
+                              </a>
+                            )}
+
+                            <a
+                              href={igHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() =>
+                                trackVenueAction({
+                                  venue_name: v.name,
+                                  venue_address: v.address,
+                                  venue_type: v.type,
+                                  action_type: 'instagram',
+                                  searched_drink: drink.trim(),
+                                  searched_ingredient: ingredient.trim(),
+                                  city: geo.cityLabel || locationInput.trim(),
+                                  zip_code: locationInput.trim(),
+                                  latitude: v.lat,
+                                  longitude: v.lng,
+                                  user_id: userId,
+                                })
+                              }
                               style={{
-                                fontSize: '0.68rem',
+                                minHeight: 40,
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                fontSize: '0.82rem',
                                 fontWeight: 600,
-                                padding: '0.14rem 0.48rem',
-                                borderRadius: 5,
-                                background: 'rgba(74, 46, 32, 0.06)',
-                                color: 'var(--text-light)',
+                                color: 'var(--text-main)',
+                                textDecoration: 'none',
                                 fontFamily: 'Inter, sans-serif',
-                                cursor: 'default',
                               }}
                             >
-                              {tag}
-                            </span>
-                          ))}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <AtSign size={14} />
+                                {isVerifiedIg ? 'Official Instagram' : 'Search on Instagram'}
+                              </span>
+                              <ExternalLink size={13} color="var(--text-muted)" />
+                            </a>
+
+                            {v.website && (
+                              <a
+                                href={v.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() =>
+                                  trackVenueAction({
+                                    venue_name: v.name,
+                                    venue_address: v.address,
+                                    venue_type: v.type,
+                                    action_type: 'website',
+                                    searched_drink: drink.trim(),
+                                    searched_ingredient: ingredient.trim(),
+                                    city: geo.cityLabel || locationInput.trim(),
+                                    zip_code: locationInput.trim(),
+                                    latitude: v.lat,
+                                    longitude: v.lng,
+                                    user_id: userId,
+                                  })
+                                }
+                                style={{
+                                  minHeight: 40,
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: 8,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 600,
+                                  color: 'var(--text-main)',
+                                  textDecoration: 'none',
+                                  fontFamily: 'Inter, sans-serif',
+                                }}
+                              >
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <Globe size={14} /> Menu / Website
+                                </span>
+                                <ExternalLink size={13} color="var(--text-muted)" />
+                              </a>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleInviteFriendToVenue(v)}
+                              style={{
+                                minHeight: 40,
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: 8,
+                                border: 'none',
+                                background: 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                color: 'var(--text-main)',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                fontFamily: 'Inter, sans-serif',
+                              }}
+                            >
+                              {copiedVenueId === v.id ? <Check size={14} color="#1a7a42" /> : <UserPlus size={14} />}
+                              <span>{copiedVenueId === v.id ? 'Invite Link Copied!' : 'Invite a Friend'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                trackVenueAction({
+                                  venue_name: v.name,
+                                  venue_address: v.address,
+                                  venue_type: v.type,
+                                  action_type: 'share_venue',
+                                  searched_drink: drink.trim(),
+                                  searched_ingredient: ingredient.trim(),
+                                  city: geo.cityLabel || locationInput.trim(),
+                                  zip_code: locationInput.trim(),
+                                  latitude: v.lat,
+                                  longitude: v.lng,
+                                  user_id: userId,
+                                })
+                                setStoryCaptionCopied(false)
+                                setStoryModalVenue(v)
+                              }}
+                              style={{
+                                minHeight: 40,
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: 8,
+                                border: 'none',
+                                background: 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                color: 'var(--text-main)',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                fontFamily: 'Inter, sans-serif',
+                              }}
+                            >
+                              <Camera size={14} />
+                              <span>Create IG Story Card</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {/* Spacious, Uncrowded 2-Button Action Footer (Unified Raised Tactile Style) */}
-                    <div
-                      style={{
-                        marginTop: '0.85rem',
-                        paddingTop: '0.75rem',
-                        borderTop: '1px solid rgba(74, 46, 32, 0.12)',
-                        display: 'flex',
-                        gap: '0.55rem',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleInviteFriendToVenue(v)}
-                        aria-label={`Invite Friend to ${v.name}`}
-                        style={{
-                          flex: 1,
-                          minBlockSize: 40,
-                          padding: '0.48rem 0.7rem',
-                          borderRadius: 10,
-                          border: '1.5px solid var(--primary)',
-                          background: copiedVenueId === v.id ? 'var(--primary)' : '#ffffff',
-                          color: copiedVenueId === v.id ? '#ffffff' : 'var(--primary)',
-                          boxShadow: '0 2px 0 rgba(226, 114, 91, 0.26), 0 4px 10px rgba(226, 114, 91, 0.14)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '0.79rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.18s ease',
-                        }}
-                      >
-                        {copiedVenueId === v.id ? '✅ Invite Link Copied!' : '🥂 Invite Friend ↗'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          trackVenueAction({
-                            venue_name: v.name,
-                            venue_address: v.address,
-                            venue_type: v.type,
-                            action_type: 'share_venue',
-                            searched_drink: drink.trim(),
-                            searched_ingredient: ingredient.trim(),
-                            city: geo.cityLabel || locationInput.trim(),
-                            zip_code: locationInput.trim(),
-                            latitude: v.lat,
-                            longitude: v.lng,
-                            user_id: userId,
-                          })
-                          setStoryCaptionCopied(false)
-                          setStoryModalVenue(v)
-                        }}
-                        aria-label={`IG Story Card for ${v.name}`}
-                        style={{
-                          flex: 1,
-                          minBlockSize: 40,
-                          padding: '0.48rem 0.7rem',
-                          borderRadius: 10,
-                          border: '1.5px solid rgba(74, 46, 32, 0.28)',
-                          background: '#ffffff',
-                          color: 'var(--text-main)',
-                          boxShadow: '0 2px 0 rgba(74, 46, 32, 0.16), 0 4px 10px rgba(74, 46, 32, 0.1)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '0.79rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.18s ease',
-                        }}
-                      >
-                        📸 IG Story Card ↗
-                      </button>
                     </div>
-                  </div>
-                )
+                  )
+                }
 
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* Share Live Search Map Bar */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+                    {/* Results Summary & Map Toggle Bar */}
                     <div
-                      className="glass"
                       style={{
-                        padding: '0.75rem 1.15rem',
+                        padding: '0.75rem 1.1rem',
                         borderRadius: 16,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         flexWrap: 'wrap',
                         gap: '0.6rem',
-                        background: 'rgba(255, 255, 255, 0.92)',
+                        background: '#FFFFFF',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 2px 10px rgba(46, 29, 20, 0.04)',
                       }}
                     >
-                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.84rem', color: 'var(--text-main)', fontWeight: 600 }}>
-                        🗺️ Found <strong>{venues.length} local spots</strong> for <strong>&ldquo;{queryLabel}&rdquo;</strong>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.86rem', color: 'var(--text-main)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <MapPin size={16} color="var(--primary)" />
+                        <span>Found <strong>{venues.length} local spots</strong> for &ldquo;{queryLabel}&rdquo;</span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={handleShareDeepLink}
-                        style={{
-                          minBlockSize: 36,
-                          padding: '0.4rem 0.95rem',
-                          borderRadius: 99,
-                          border: '1.5px solid var(--primary)',
-                          background: deepLinkCopied ? 'var(--primary)' : 'rgba(226, 114, 91, 0.12)',
-                          color: deepLinkCopied ? '#fff' : 'var(--primary)',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {deepLinkCopied ? '✅ Map Link Copied!' : '🔗 Share This Search Map'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowMap(prev => !prev)}
+                          style={{
+                            minHeight: 40,
+                            padding: '0.4rem 0.9rem',
+                            borderRadius: 99,
+                            border: '1px solid var(--border)',
+                            background: '#FAF7F2',
+                            color: 'var(--text-main)',
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                          }}
+                        >
+                          <MapIcon size={14} />
+                          <span>{showMap ? 'Hide Map' : 'Show Map'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleShareDeepLink}
+                          style={{
+                            minHeight: 40,
+                            padding: '0.4rem 0.95rem',
+                            borderRadius: 99,
+                            border: '1px solid var(--primary)',
+                            background: deepLinkCopied ? 'var(--primary)' : 'rgba(226, 114, 91, 0.1)',
+                            color: deepLinkCopied ? '#fff' : 'var(--primary)',
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                          }}
+                        >
+                          {deepLinkCopied ? <Check size={14} /> : <Copy size={14} />}
+                          <span>{deepLinkCopied ? 'Link Copied!' : 'Share Search'}</span>
+                        </button>
+                      </div>
                     </div>
 
                     {exactMatches.length > 0 && (
                       <div>
-                        <div className="glass" style={{ padding: '0.9rem 1.25rem', borderRadius: 16, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <div>
-                            <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
-                              🎯 Closest Exact Matches ({exactMatches.length})
-                            </h2>
-                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem', color: 'var(--text-light)', marginTop: '0.15rem' }}>
-                              Local spots within 55 miles whose menus, reviews, or social posts directly match your requested drink or ingredient.
-                            </p>
-                          </div>
+                        <div style={{ marginBottom: '0.9rem' }}>
+                          <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: '1.3rem', color: 'var(--text-main)', margin: 0 }}>
+                            Closest Exact Matches ({exactMatches.length})
+                          </h2>
+                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.84rem', color: 'var(--text-light)', marginTop: '0.2rem' }}>
+                            Spots whose menus, reviews, or specialty profiles match your search.
+                          </p>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(295px, 1fr))', gap: '1rem' }}>
                           {exactMatches.map(v => renderVenueCard(v, false))}
                         </div>
                       </div>
@@ -1813,41 +2115,7 @@ export default function DiscoverPage() {
         )
       })()}
 
-      {/* Floating Community Wishlist Button */}
-      <button
-        type="button"
-        onClick={() => {
-          setFeedbackDefaultWish(queryLabel !== 'your perfect sip' ? queryLabel : '')
-          setFeedbackModalOpen(true)
-        }}
-        aria-label="Wish a drink or feature for SipScouts"
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 20,
-          zIndex: 80,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.45rem',
-          padding: '0.62rem 1.05rem',
-          borderRadius: 99,
-          background: 'rgba(252, 246, 240, 0.96)',
-          border: '1.5px solid var(--primary)',
-          boxShadow: '0 4px 18px rgba(74, 46, 32, 0.22)',
-          cursor: 'pointer',
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '0.82rem',
-          fontWeight: 700,
-          color: 'var(--primary)',
-          backdropFilter: 'blur(8px)',
-        }}
-        title="What's one drink or feature you wish SipScouts had?"
-      >
-        <span style={{ fontSize: '1rem' }}>💡</span>
-        <span>Wish a Drink or Feature</span>
-      </button>
-
-      {/* Community Wishlist & Feedback Modal */}
+      {/* Community Wishlist & Feedback Modal (triggered from Top Nav, Mobile Menu, or Results Footer) */}
       <FeedbackModal
         isOpen={feedbackModalOpen}
         onClose={() => setFeedbackModalOpen(false)}

@@ -104,22 +104,40 @@ def _normalize_venue(raw: Dict, default_tag: str) -> Optional[Dict]:
     if not name or lat is None or lng is None:
         return None
 
-    tags = list(raw.get("tags") or [])
-    if default_tag and default_tag not in tags:
-        tags.insert(0, default_tag)
+    # Deduplicate tags & ensure at most one star rating tag
+    raw_tags = list(raw.get("tags") or [])
+    tags: List[str] = []
+    has_star = False
+    for t in raw_tags:
+        if not t or t in ("Exact Match", "Potential Match"):
+            continue
+        if default_tag and t.strip().lower() == default_tag.strip().lower():
+            continue
+        if t.startswith("★"):
+            if has_star:
+                continue
+            has_star = True
+        if t not in tags:
+            tags.append(t)
+
+    raw_type = (raw.get("type") or "cafe").strip().lower()
+    venue_type = raw_type if raw_type in ("bar", "cafe", "tea_house", "zero_proof") else "cafe"
 
     return {
         "id": str(raw.get("id") or f"{name}-{float(lat):.4f}-{float(lng):.4f}"),
         "name": name,
         "address": raw.get("address") or "Nearby",
-        "type": "bar" if raw.get("type") == "bar" else "cafe",
+        "type": venue_type,
         "lat": float(lat),
         "lng": float(lng),
         "tags": tags[:5],
+        "rating": raw.get("rating"),
         "phone": raw.get("phone"),
         "open_now": raw.get("open_now"),
         "website": raw.get("website"),
         "instagram_url": raw.get("instagram_url"),
+        "photo_url": raw.get("photo_url"),
+        "evidence": raw.get("evidence"),
         "match_tier": raw.get("match_tier", "exact"),
         "source": raw.get("source", "scout"),
     }
@@ -137,15 +155,24 @@ def _deduplicate_and_merge(venues: List[Dict]) -> List[Dict]:
         else:
             existing = by_key[key]
             merged_tags = list(existing.get("tags", []))
+            has_star = any(t.startswith("★") for t in merged_tags)
             for t in v.get("tags", []):
+                if t.startswith("★"):
+                    if has_star:
+                        continue
+                    has_star = True
                 if t not in merged_tags:
                     merged_tags.append(t)
             existing["tags"] = merged_tags[:6]
             if existing.get("address") in ("Nearby", "Local Neighborhood Spot") and v.get("address"):
                 existing["address"] = v["address"]
-            for field in ("phone", "open_now", "website", "instagram_url"):
+            for field in ("phone", "open_now", "website", "instagram_url", "photo_url", "rating"):
                 if existing.get(field) is None and v.get(field) is not None:
                     existing[field] = v[field]
+            if not existing.get("evidence") and v.get("evidence"):
+                existing["evidence"] = v["evidence"]
+            if existing.get("type") == "cafe" and v.get("type") in ("tea_house", "zero_proof", "bar"):
+                existing["type"] = v["type"]
             if v.get("match_tier") == "exact":
                 existing["match_tier"] = "exact"
     return list(by_key.values())
@@ -299,10 +326,26 @@ async def orchestrate_search(
 
         asyncio.create_task(_finish_and_save_slow_tasks(list(pending)))
 
-    deduped = [
-        v for v in _deduplicate_and_merge(collected)
-        if calculate_haversine_distance(lat, lon, v["lat"], v["lng"]) <= 55.0
-    ]
+    deduped_with_dist = []
+    for v in _deduplicate_and_merge(collected):
+        d = calculate_haversine_distance(lat, lon, v["lat"], v["lng"])
+        if d <= 55.0:
+            v["_dist_mi"] = d
+            deduped_with_dist.append(v)
+
+    deduped_with_dist.sort(key=lambda x: x["_dist_mi"])
+    # Adaptive search radius: in dense metros, don't pad with far-away spots if >=12 matches exist within 18 miles
+    near_18 = [v for v in deduped_with_dist if v["_dist_mi"] <= 18.0]
+    near_35 = [v for v in deduped_with_dist if v["_dist_mi"] <= 35.0]
+    if len(near_18) >= 12:
+        deduped = near_18
+    elif len(near_35) >= 12:
+        deduped = near_35
+    else:
+        deduped = deduped_with_dist
+
+    for v in deduped:
+        v.pop("_dist_mi", None)
 
     # Scrape website HTML in parallel for official Instagram handles
     await enrich_venues_with_instagram(deduped)

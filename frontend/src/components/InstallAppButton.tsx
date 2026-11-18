@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Smartphone } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -58,14 +59,15 @@ export default function InstallAppButton() {
         onClick={handleInstallClick}
         className="warm-btn-ghost"
         style={{
-          fontSize: '0.9rem',
+          fontSize: '0.88rem',
           fontWeight: 600,
-          padding: '0.65rem 1.25rem',
+          minHeight: 44,
+          padding: '0.55rem 1.15rem',
           borderRadius: 99,
           background: 'rgba(255, 255, 255, 0.92)',
-          border: '1.5px solid var(--primary)',
+          border: '1.5px solid rgba(255, 255, 255, 0.65)',
           color: 'var(--text-main)',
-          boxShadow: '0 4px 14px rgba(74, 46, 32, 0.15)',
+          boxShadow: '0 4px 14px rgba(28, 14, 8, 0.16)',
           cursor: 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
@@ -74,7 +76,8 @@ export default function InstallAppButton() {
         }}
         title="Install SipScouts on your phone"
       >
-        📲 Get the App
+        <Smartphone size={15} />
+        <span>Get the App</span>
       </button>
 
       {showModal && (

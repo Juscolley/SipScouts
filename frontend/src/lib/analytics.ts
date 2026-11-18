@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase'
 
 export type VenueActionType =
+  | 'directions'
   | 'call'
   | 'instagram'
   | 'website'

@@ -54,6 +54,36 @@ async def read_demo(request: Request):
 async def ping():
     return {"message": "pong from FastAPI backend"}
 
+
+@app.get("/api/place-photo")
+async def get_place_photo(name: str):
+    """Proxies Google Places API (New) photo media without exposing the server API key to the browser."""
+    from fastapi.responses import Response
+    import httpx
+
+    clean_name = (name or "").strip()
+    if not clean_name.startswith("places/") or "/photos/" not in clean_name:
+        return JSONResponse({"error": "Invalid photo reference"}, status_code=400)
+
+    api_key = os.getenv("GOOGLE_PLACES_API_KEY", "").strip()
+    if not api_key or api_key.lower() == "placeholder":
+        return JSONResponse({"error": "Places API not configured"}, status_code=503)
+
+    photo_url = f"https://places.googleapis.com/v1/{clean_name}/media?maxWidthPx=640&key={api_key}"
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=6.0) as client:
+            resp = await client.get(photo_url)
+            if resp.status_code == 200:
+                content_type = resp.headers.get("content-type", "image/jpeg")
+                return Response(
+                    content=resp.content,
+                    media_type=content_type,
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+    except Exception:
+        pass
+    return JSONResponse({"error": "Photo unavailable"}, status_code=404)
+
 @app.get("/api/search")
 async def search_venues(
     request: Request,

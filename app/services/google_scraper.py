@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from typing import Dict, List, Optional
+from urllib.parse import quote
 import requests
 from dotenv import load_dotenv
 from app.services.distance import calculate_haversine_distance
@@ -92,12 +93,26 @@ _ACCENT_TWINS = {
 }
 
 
+_DRINK_SYNONYMS = {
+    "hojicha": '(hojicha OR "roasted green tea")',
+    "seedlip": '(seedlip OR "non-alcoholic spirit" OR "zero-proof")',
+    "phony negroni": '("phony negroni" OR "non-alcoholic negroni" OR "zero-proof negroni")',
+    "zero-proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic")',
+    "zero proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic")',
+}
+
+
 def _expand_accent_twins(keywords: str) -> str:
-    """Expands common folded beverage terms to match both unaccented and accented Google Places venues."""
+    """Expands common folded beverage terms and regional drink synonyms for Google Places search."""
     if not keywords:
         return ""
+    expanded = keywords
+    # Expand multi-word or single-word drink synonyms first
+    for term, syn in _DRINK_SYNONYMS.items():
+        if re.search(r"\b" + re.escape(term) + r"\b", expanded, re.IGNORECASE):
+            expanded = re.sub(r"\b" + re.escape(term) + r"\b", syn, expanded, flags=re.IGNORECASE)
     pattern = re.compile(r"\b(" + "|".join(_ACCENT_TWINS.keys()) + r")\b", re.IGNORECASE)
-    return pattern.sub(lambda m: _ACCENT_TWINS[m.group(0).lower()], keywords)
+    return pattern.sub(lambda m: _ACCENT_TWINS[m.group(0).lower()], expanded)
 
 
 def build_smart_search_query(keywords: str) -> str:
@@ -125,8 +140,94 @@ def _extract_links(website_uri: Optional[str]) -> tuple[Optional[str], Optional[
     return u, None
 
 
-def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_m: float = 12000.0) -> List[Dict]:
-    """Queries Google Places API (New) Text Search endpoint including phone, open status, and website/social links."""
+def _classify_venue_type(
+    types: List[str],
+    primary_type: Optional[str],
+    name: str,
+    is_mocktail_query: bool,
+) -> str:
+    """Classifies venue type strictly from Google Places metadata (never from query-expansion words like 'bar')."""
+    pt = (primary_type or "").strip().lower()
+    tset = {t.strip().lower() for t in (types or []) if t}
+    if pt:
+        tset.add(pt)
+    name_lower = (name or "").lower()
+
+    bar_types = {"bar", "cocktail_bar", "wine_bar", "pub", "night_club", "lounge", "brewery", "distillery", "liquor_store"}
+    tea_types = {"tea_house", "bubble_tea_store"}
+    cafe_types = {"cafe", "coffee_shop", "bakery", "ice_cream_shop", "dessert_shop", "juice_shop"}
+
+    if pt in tea_types or (not (pt in bar_types) and (tset & tea_types or any(w in name_lower for w in ("tea", "matcha", "boba", "chai")))):
+        return "tea_house"
+    if pt in bar_types:
+        return "zero_proof" if is_mocktail_query and "zero" in name_lower else "bar"
+    if pt in cafe_types:
+        return "cafe"
+    if tset & bar_types and not (tset & cafe_types):
+        return "zero_proof" if is_mocktail_query and "zero" in name_lower else "bar"
+    if is_mocktail_query and ("zero" in name_lower or "mocktail" in name_lower or "kava" in name_lower):
+        return "zero_proof"
+    return "cafe"
+
+
+def _extract_match_evidence(
+    place: Dict,
+    name: str,
+    venue_type: str,
+    search_tokens: List[str],
+) -> tuple[str, bool]:
+    """
+    Scans Google Places editorial summary, reviews, and venue name for search tokens.
+    Returns (evidence_text, has_strong_evidence).
+    """
+    if not search_tokens:
+        return "Verified local drink spot", True
+
+    reviews = place.get("reviews") or []
+    matching_reviews: List[str] = []
+    for rev in reviews:
+        txt = (rev.get("text", {}) or {}).get("text") or (rev.get("originalText", {}) or {}).get("text") or ""
+        txt_lower = txt.lower()
+        if any(tok in txt_lower for tok in search_tokens):
+            matching_reviews.append(txt.strip())
+
+    if matching_reviews:
+        first = matching_reviews[0]
+        # Extract a concise snippet around the first matched token
+        snippet = first[:110].rstrip() + ("…" if len(first) > 110 else "")
+        for tok in search_tokens:
+            idx = first.lower().find(tok)
+            if idx != -1:
+                start = max(0, idx - 35)
+                end = min(len(first), idx + 75)
+                snippet = ("…" if start > 0 else "") + first[start:end].strip() + ("…" if end < len(first) else "")
+                break
+        count = len(matching_reviews)
+        return f"Mentioned in {count} review{'s' if count > 1 else ''}: \"{snippet}\"", True
+
+    editorial = ((place.get("editorialSummary") or {}).get("text") or "").strip()
+    if editorial and any(tok in editorial.lower() for tok in search_tokens):
+        snippet = editorial[:110].rstrip() + ("…" if len(editorial) > 110 else "")
+        return f"Profile: \"{snippet}\"", True
+
+    name_lower = (name or "").lower()
+    matched_in_name = [tok for tok in search_tokens if tok in name_lower]
+    if matched_in_name:
+        return f"Specialty in name: {name}", True
+
+    label_map = {"tea_house": "tea house", "bar": "bar & lounge", "zero_proof": "zero-proof spot", "cafe": "café"}
+    return f"Nearby {label_map.get(venue_type, 'drink spot')}", False
+
+
+def _search_places_new(
+    api_key: str,
+    query: str,
+    lat: float,
+    lon: float,
+    radius_m: float = 12000.0,
+    raw_keywords: str = "",
+) -> List[Dict]:
+    """Queries Google Places API (New) Text Search endpoint including phone, open status, photos, reviews, and links."""
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
         "Content-Type": "application/json",
@@ -135,7 +236,8 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.rating,places.primaryType,"
             "places.nationalPhoneNumber,places.internationalPhoneNumber,"
-            "places.websiteUri,places.currentOpeningHours.openNow,places.regularOpeningHours.openNow"
+            "places.websiteUri,places.currentOpeningHours.openNow,places.regularOpeningHours.openNow,"
+            "places.photos,places.editorialSummary,places.reviews"
         ),
     }
     payload = {
@@ -154,9 +256,14 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
 
     data = resp.json()
     results: List[Dict] = []
-    kw_lower = query.lower()
-    is_mocktail_query = any(w in kw_lower for w in MOCKTAIL_KEYWORDS)
-    is_cocktail_query = any(w in kw_lower for w in COCKTAIL_KEYWORDS)
+    kw_source = (raw_keywords or query).lower()
+    is_mocktail_query = any(w in kw_source for w in MOCKTAIL_KEYWORDS)
+    search_tokens = [
+        t for t in re.split(r"[\s,+]+", (raw_keywords or "").lower())
+        if len(t) >= 3 and t not in {"the", "and", "with", "for", "latte"}
+    ]
+    if not search_tokens and raw_keywords:
+        search_tokens = [raw_keywords.strip().lower()]
 
     for place in data.get("places", []):
         loc = place.get("location", {})
@@ -172,18 +279,15 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
             continue
 
         types = place.get("types", []) or []
-        if not _is_valid_drink_venue(types, place.get("primaryType")):
+        primary_type = place.get("primaryType")
+        if not _is_valid_drink_venue(types, primary_type):
             continue
 
-        if is_mocktail_query:
-            venue_type = "zero_proof"
-        elif any(t in types for t in ("bar", "night_club", "pub", "wine_bar", "liquor_store")) or is_cocktail_query:
-            venue_type = "bar"
-        else:
-            venue_type = "cafe"
-        tags = ["Google Places"]
-        if place.get("rating"):
-            tags.append(f"★ {place['rating']}")
+        venue_type = _classify_venue_type(types, primary_type, name, is_mocktail_query)
+        tags: List[str] = []
+        rating_val = place.get("rating")
+        if rating_val:
+            tags.append(f"★ {rating_val}")
 
         phone = place.get("nationalPhoneNumber") or place.get("internationalPhoneNumber")
         open_now = place.get("currentOpeningHours", {}).get("openNow")
@@ -191,6 +295,13 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
             open_now = place.get("regularOpeningHours", {}).get("openNow")
 
         website, instagram_url = _extract_links(place.get("websiteUri"))
+
+        photos = place.get("photos") or []
+        photo_url: Optional[str] = None
+        if photos and isinstance(photos[0], dict) and photos[0].get("name"):
+            photo_url = f"/api/place-photo?name={quote(photos[0]['name'], safe='')}"
+
+        evidence, has_strong_evidence = _extract_match_evidence(place, name, venue_type, search_tokens)
 
         results.append(
             {
@@ -200,11 +311,15 @@ def _search_places_new(api_key: str, query: str, lat: float, lon: float, radius_
                 "latitude": float(p_lat),
                 "longitude": float(p_lon),
                 "type": venue_type,
+                "rating": rating_val,
                 "tags": tags,
                 "phone": phone,
                 "open_now": open_now,
                 "website": website,
                 "instagram_url": instagram_url,
+                "photo_url": photo_url,
+                "evidence": evidence,
+                "has_strong_evidence": has_strong_evidence,
                 "source": "google",
             }
         )
@@ -293,11 +408,9 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     # Stage 1: Closest Exact Matches within 55 miles (always include drink-venue category context)
     exact_query = search_query
     try:
-        exact_results = _search_places_new(api_key, exact_query, lat, lon, radius_m=50000.0)
+        exact_results = _search_places_new(api_key, exact_query, lat, lon, radius_m=50000.0, raw_keywords=kw_clean)
         for r in exact_results:
             r["match_tier"] = "exact"
-            if "Exact Match" not in r["tags"]:
-                r["tags"].insert(0, "Exact Match")
             seen_ids.add(r["id"])
             collected.append(r)
     except Exception as e:
@@ -307,12 +420,10 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     if kw_clean:
         fallback_query = _build_local_category_fallback_query(kw_clean)
         try:
-            more = _search_places_new(api_key, fallback_query, lat, lon, radius_m=40000.0)
+            more = _search_places_new(api_key, fallback_query, lat, lon, radius_m=40000.0, raw_keywords=kw_clean)
             for r in more:
                 if r["id"] not in seen_ids:
-                    r["match_tier"] = "potential"
-                    if "Potential Match" not in r["tags"]:
-                        r["tags"].insert(0, "Potential Match")
+                    r["match_tier"] = "exact" if r.get("has_strong_evidence") else "potential"
                     seen_ids.add(r["id"])
                     collected.append(r)
         except Exception:
