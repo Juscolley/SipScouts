@@ -9,7 +9,6 @@ import {
   Bookmark,
   MoreHorizontal,
   Phone,
-  AtSign,
   Globe,
   Share2,
   Sparkles,
@@ -37,6 +36,27 @@ import InstallAppButton from '@/components/InstallAppButton'
 import FeedbackModal from '@/components/FeedbackModal'
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false })
+
+function InstagramIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  )
+}
 
 interface Venue {
   id: string
@@ -565,7 +585,7 @@ export default function DiscoverPage() {
               title="Follow @SipScoutsApp on Instagram"
               style={{ gap: '0.3rem' }}
             >
-              <AtSign size={15} />
+              <InstagramIcon size={15} />
               <span>@SipScoutsApp</span>
             </a>
             {isAdmin && <a href="/merchant">B2B Dashboard</a>}
@@ -619,7 +639,7 @@ export default function DiscoverPage() {
               rel="noopener noreferrer"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <AtSign size={17} /> @SipScoutsApp
+              <InstagramIcon size={17} /> @SipScoutsApp
             </a>
             {isAdmin && (
               <a href="/merchant" onClick={() => setMobileMenuOpen(false)}>
@@ -1481,7 +1501,7 @@ export default function DiscoverPage() {
                               }}
                             >
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <AtSign size={14} />
+                                <InstagramIcon size={14} />
                                 {isVerifiedIg ? 'Official Instagram' : 'Search on Instagram'}
                               </span>
                               <ExternalLink size={13} color="var(--text-muted)" />
