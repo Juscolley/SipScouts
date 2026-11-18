@@ -187,28 +187,35 @@ _BEVERAGE_CONTEXT = (
 
 def _is_drink_relevant_text(txt_lower: str, search_tokens: List[str]) -> bool:
     """
-    Returns True if text genuinely matches the searched drink/ingredient in a beverage context
-    (and rejects food-only hits like 'blueberry muffin' when no drink term is present).
+    Returns True if text genuinely matches all searched drink/ingredient terms in a beverage context
+    (and rejects food-only hits like 'blueberry muffin' or partial single-term hits when 2+ terms were searched).
     """
     matched = [tok for tok in search_tokens if tok in txt_lower]
     if not matched:
         return False
 
-    # If multiple tokens were searched (e.g., ['matcha', 'blueberry']), matching all is always valid
-    if len(search_tokens) >= 2 and len(matched) >= 2:
+    # When both drink + ingredient (2+ tokens) are searched, require ALL tokens in the text
+    if len(search_tokens) >= 2:
+        if len(matched) < len(search_tokens):
+            return False
+        # Verify none of the matched tokens only appear inside food phrases (e.g. 'blueberry muffin')
+        for tok in search_tokens:
+            food_pattern = re.compile(
+                r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
+            )
+            cleaned = food_pattern.sub("", txt_lower)
+            if tok not in cleaned:
+                return False
         return True
 
-    # Reject single-token hits that are only food items (e.g., "blueberry muffin") without beverage context
+    # Single-token search: reject food-only hits without beverage context
+    tok = matched[0]
     has_beverage_ctx = any(b in txt_lower for b in _BEVERAGE_CONTEXT)
-    for tok in matched:
-        food_pattern = re.compile(
-            r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
-        )
-        # Strip food phrases and check if the token still appears in a non-food/beverage context
-        cleaned = food_pattern.sub("", txt_lower)
-        if tok in cleaned and (has_beverage_ctx or len(search_tokens) == 1):
-            return True
-    return False
+    food_pattern = re.compile(
+        r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
+    )
+    cleaned = food_pattern.sub("", txt_lower)
+    return tok in cleaned and (has_beverage_ctx or len(search_tokens) == 1)
 
 
 def _extract_match_evidence(

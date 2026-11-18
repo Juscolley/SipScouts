@@ -58,12 +58,15 @@ interface Venue {
   distanceKm?: number
 }
 
-function getDirectionsUrl(v: Venue): string {
+function getDirectionsUrl(v: Venue, originLocation?: string): string {
   const dest =
     v.address && v.address !== 'Nearby' && v.address !== 'Local Neighborhood Spot'
       ? `${v.name}, ${v.address}`
       : `${v.lat},${v.lng}`
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`
+  const originParam = originLocation && originLocation.trim()
+    ? `&origin=${encodeURIComponent(originLocation.trim())}`
+    : ''
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}${originParam}`
 }
 
 function prefersMiles(): boolean {
@@ -1282,7 +1285,7 @@ export default function DiscoverPage() {
                         {/* Primary Action Row: Directions (Main) + Save + More */}
                         <div style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           <a
-                            href={getDirectionsUrl(v)}
+                            href={getDirectionsUrl(v, locationInput)}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() =>
