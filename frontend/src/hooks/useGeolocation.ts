@@ -7,7 +7,7 @@ export interface GeoLocation {
   source: 'gps' | 'ip' | null
   error: string | null
   loading: boolean
-  requestLocation: () => void
+  requestLocation: (userInitiated?: boolean) => void
 }
 
 export function useGeolocation(): GeoLocation {
@@ -20,7 +20,7 @@ export function useGeolocation(): GeoLocation {
     loading: true,
   })
 
-  const fetchIpFallback = useCallback(async (reason: string) => {
+  const fetchIpFallback = useCallback(async (reason: string, surfaceError = false) => {
     try {
       const res = await fetch('https://get.geojs.io/v1/ip/geo.json')
       if (res.ok) {
@@ -34,7 +34,7 @@ export function useGeolocation(): GeoLocation {
             longitude: lng,
             cityLabel: label,
             source: 'ip',
-            error: null,
+            error: surfaceError ? reason : null,
             loading: false,
           })
           return
@@ -53,15 +53,15 @@ export function useGeolocation(): GeoLocation {
     })
   }, [])
 
-  const requestLocation = useCallback(() => {
+  const requestLocation = useCallback((userInitiated = false) => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
-      fetchIpFallback('Geolocation not supported')
+      fetchIpFallback('Location is not supported by this browser. Type a Zip or City below.', userInitiated)
       return
     }
 
     setState(s => ({ ...s, loading: true, error: null }))
 
-    // Stage 1: Fast Wi-Fi / cell / cached GPS position
+    // Stage 1: Fast GPS / Wi-Fi position (5s timeout)
     navigator.geolocation.getCurrentPosition(
       pos => {
         setState({
@@ -73,8 +73,16 @@ export function useGeolocation(): GeoLocation {
           loading: false,
         })
       },
-      () => {
-        // Stage 2: Retry with low-accuracy network location before falling back to IP
+      err => {
+        // If user explicitly denied permission, don't wait for Stage 2—report clearly right away
+        if (err.code === 1) {
+          fetchIpFallback(
+            'Location access is blocked in your browser or phone settings. Enable Location for SipScouts, or type a Zip/City below.',
+            userInitiated
+          )
+          return
+        }
+        // Stage 2: Fast low-accuracy network fallback (4s timeout)
         navigator.geolocation.getCurrentPosition(
           pos => {
             setState({
@@ -86,18 +94,21 @@ export function useGeolocation(): GeoLocation {
               loading: false,
             })
           },
-          err => {
-            fetchIpFallback(err.message)
+          () => {
+            fetchIpFallback(
+              'Could not get exact GPS right now—using approximate area. You can also type a Zip or City below.',
+              userInitiated
+            )
           },
-          { enableHighAccuracy: false, timeout: 12000, maximumAge: 600000 }
+          { enableHighAccuracy: false, timeout: 4000, maximumAge: 600000 }
         )
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 300000 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
     )
   }, [fetchIpFallback])
 
   useEffect(() => {
-    requestLocation()
+    requestLocation(false)
   }, [requestLocation])
 
   return { ...state, requestLocation }

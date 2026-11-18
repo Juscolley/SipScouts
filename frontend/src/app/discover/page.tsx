@@ -686,7 +686,8 @@ export default function DiscoverPage() {
                 <span>Near {geo.cityLabel || 'your area'}</span>
                 <button
                   type="button"
-                  onClick={geo.requestLocation}
+                  disabled={geo.loading}
+                  onClick={() => geo.requestLocation(true)}
                   style={{
                     background: 'rgba(255,255,255,0.2)',
                     border: '1px solid rgba(255,255,255,0.45)',
@@ -695,10 +696,11 @@ export default function DiscoverPage() {
                     minHeight: 32,
                     padding: '0.2rem 0.7rem',
                     fontSize: '0.75rem',
-                    cursor: 'pointer',
+                    cursor: geo.loading ? 'wait' : 'pointer',
+                    opacity: geo.loading ? 0.8 : 1,
                   }}
                 >
-                  Use Exact GPS
+                  {geo.loading ? 'Locating…' : 'Use Exact GPS'}
                 </button>
               </p>
             )}
@@ -706,7 +708,7 @@ export default function DiscoverPage() {
               <p className="hero-note">
                 <button
                   type="button"
-                  onClick={geo.requestLocation}
+                  onClick={() => geo.requestLocation(true)}
                   style={{
                     background: 'rgba(255,255,255,0.22)',
                     border: '1px solid rgba(255,255,255,0.5)',
@@ -723,6 +725,23 @@ export default function DiscoverPage() {
                 >
                   <MapPin size={14} /> Tap to Enable Location (or enter Zip / City below)
                 </button>
+              </p>
+            )}
+            {geo.error && (
+              <p
+                role="status"
+                style={{
+                  marginTop: '0.45rem',
+                  fontSize: '0.78rem',
+                  color: '#FFE4D6',
+                  background: 'rgba(28, 14, 8, 0.55)',
+                  display: 'inline-block',
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: 10,
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                {geo.error}
               </p>
             )}
           </section>
