@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -65,6 +65,47 @@ function ScrollZoomController({
   return null
 }
 
+function MapViewportUpdater({
+  venues,
+  userLat,
+  userLng,
+}: {
+  venues: Venue[]
+  userLat?: number
+  userLng?: number
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (venues.length > 0) {
+      const points: [number, number][] = venues
+        .filter(v => Number.isFinite(v.lat) && Number.isFinite(v.lng))
+        .map(v => [v.lat, v.lng])
+
+      if (points.length > 0) {
+        // Include user marker only if it's near the search results (within ~1 degree)
+        if (
+          userLat !== undefined &&
+          userLng !== undefined &&
+          Math.abs(userLat - points[0][0]) < 1 &&
+          Math.abs(userLng - points[0][1]) < 1
+        ) {
+          points.push([userLat, userLng])
+        }
+        const bounds = L.latLngBounds(points)
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
+        return
+      }
+    }
+
+    if (userLat !== undefined && userLng !== undefined) {
+      map.setView([userLat, userLng], 13)
+    }
+  }, [map, venues, userLat, userLng])
+
+  return null
+}
+
 function getDirectionsUrl(v: Venue): string {
   const dest =
     v.address && v.address !== 'Nearby' && v.address !== 'Local Neighborhood Spot'
@@ -93,6 +134,7 @@ export default function VenueMap({ venues, userLat, userLng }: VenueMapProps) {
         className="rounded-2xl"
       >
         <ScrollZoomController zoomEnabled={zoomEnabled} setZoomEnabled={setZoomEnabled} />
+        <MapViewportUpdater venues={venues} userLat={userLat} userLng={userLng} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

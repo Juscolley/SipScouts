@@ -796,23 +796,24 @@ export default function DiscoverPage() {
                   aria-label="Clear search"
                   style={{
                     minHeight: 46,
-                    minWidth: 46,
-                    padding: '0 0.85rem',
+                    padding: '0 0.95rem',
                     borderRadius: 12,
-                    fontSize: '0.84rem',
+                    fontSize: '0.86rem',
                     fontWeight: 600,
                     fontFamily: 'Inter, sans-serif',
-                    background: 'rgba(255, 255, 255, 0.92)',
-                    border: '1px solid rgba(74, 46, 32, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.94)',
+                    border: '1px solid rgba(74, 46, 32, 0.22)',
                     color: 'var(--text-main)',
                     cursor: 'pointer',
+                    whiteSpace: 'nowrap',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.25rem',
+                    gap: '0.3rem',
                   }}
                 >
-                  <X size={16} />
+                  <X size={15} />
+                  <span>Clear</span>
                 </button>
               )}
             </div>
