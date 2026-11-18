@@ -38,6 +38,11 @@ _IGNORE_IG_HANDLES = {
     "instagram", "facebook", "twitter", "linkedin", "tiktok", "youtube", "share"
 }
 
+# Fallback official Instagram handles for multi-location/pop-up venues whose Google Places listing lacks a websiteUri
+_KNOWN_VENUE_IG: Dict[str, str] = {
+    "pinup coffee": "https://www.instagram.com/pinupcoffeeco/",
+}
+
 
 async def _extract_instagram_from_website(client: httpx.AsyncClient, website_url: str) -> Optional[str]:
     """Fast, safe scraper to extract the official Instagram profile link from a venue's website HTML."""
@@ -77,17 +82,31 @@ async def _extract_instagram_from_website(client: httpx.AsyncClient, website_url
 
 
 async def enrich_venues_with_instagram(venues: List[Dict]) -> None:
-    """Enriches venues missing instagram_url in parallel using their website."""
+    """Enriches venues missing instagram_url in parallel using their website (plus known-venue fallback)."""
+    for v in venues:
+        if not v.get("instagram_url"):
+            name_low = (v.get("name") or "").lower()
+            for needle, ig_url in _KNOWN_VENUE_IG.items():
+                if needle in name_low:
+                    v["instagram_url"] = ig_url
+                    break
+
     to_enrich = [v for v in venues if not v.get("instagram_url") and v.get("website")]
     if not to_enrich:
         return
 
-    # Cap parallel crawls to top 15 venues to keep response instantaneous
-    targets = to_enrich[:15]
+    # Cap parallel crawls to top 40 venues (concurrency-limited) so results beyond #15 still get IG links
+    targets = to_enrich[:40]
+    sem = asyncio.Semaphore(20)
+
+    async def _bounded_extract(client: httpx.AsyncClient, url: str) -> Optional[str]:
+        async with sem:
+            return await _extract_instagram_from_website(client, url)
+
     try:
         async with httpx.AsyncClient(verify=False) as client:
             results = await asyncio.gather(
-                *[_extract_instagram_from_website(client, v["website"]) for v in targets],
+                *[_bounded_extract(client, v["website"]) for v in targets],
                 return_exceptions=True
             )
             for v, res in zip(targets, results):
