@@ -1261,8 +1261,8 @@ export default function DiscoverPage() {
                           </p>
                         </div>
 
-                        {/* Match Evidence Proof */}
-                        {v.evidence && (
+                        {/* Match Evidence Proof (only shown for genuine drink/specialty matches) */}
+                        {v.evidence && !v.evidence.startsWith('Nearby ') && (
                           <div
                             style={{
                               fontSize: '0.78rem',

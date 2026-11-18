@@ -170,30 +170,75 @@ def _classify_venue_type(
     return "cafe"
 
 
+_FOOD_FOLLOWERS = (
+    "muffin", "muffins", "scone", "scones", "bagel", "bagels", "cake", "cakes",
+    "donut", "donuts", "doughnut", "doughnuts", "croissant", "croissants",
+    "pie", "pies", "bread", "waffle", "waffles", "pancake", "pancakes",
+    "toast", "tart", "tarts", "cookie", "cookies", "brownie", "danish",
+    "biscuit", "cobbler", "jam", "preserve",
+)
+
+_BEVERAGE_CONTEXT = (
+    "latte", "matcha", "tea", "coffee", "espresso", "drink", "cocktail",
+    "mocktail", "iced", "cold brew", "cold foam", "foam", "syrup", "boba",
+    "smoothie", "refresher", "lemonade", "soda", "spritz", "chai", "sip",
+)
+
+
+def _is_drink_relevant_text(txt_lower: str, search_tokens: List[str]) -> bool:
+    """
+    Returns True if text genuinely matches the searched drink/ingredient in a beverage context
+    (and rejects food-only hits like 'blueberry muffin' when no drink term is present).
+    """
+    matched = [tok for tok in search_tokens if tok in txt_lower]
+    if not matched:
+        return False
+
+    # If multiple tokens were searched (e.g., ['matcha', 'blueberry']), matching all is always valid
+    if len(search_tokens) >= 2 and len(matched) >= 2:
+        return True
+
+    # Reject single-token hits that are only food items (e.g., "blueberry muffin") without beverage context
+    has_beverage_ctx = any(b in txt_lower for b in _BEVERAGE_CONTEXT)
+    for tok in matched:
+        food_pattern = re.compile(
+            r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
+        )
+        # Strip food phrases and check if the token still appears in a non-food/beverage context
+        cleaned = food_pattern.sub("", txt_lower)
+        if tok in cleaned and (has_beverage_ctx or len(search_tokens) == 1):
+            return True
+    return False
+
+
 def _extract_match_evidence(
     place: Dict,
     name: str,
     venue_type: str,
     search_tokens: List[str],
-) -> tuple[str, bool]:
+) -> tuple[Optional[str], bool]:
     """
-    Scans Google Places editorial summary, reviews, and venue name for search tokens.
-    Returns (evidence_text, has_strong_evidence).
+    Scans Google Places editorial summary, reviews, and venue name for genuine beverage match proof.
+    Returns (evidence_text_or_None, has_strong_evidence).
     """
     if not search_tokens:
-        return "Verified local drink spot", True
+        return None, True
 
     reviews = place.get("reviews") or []
     matching_reviews: List[str] = []
     for rev in reviews:
         txt = (rev.get("text", {}) or {}).get("text") or (rev.get("originalText", {}) or {}).get("text") or ""
         txt_lower = txt.lower()
-        if any(tok in txt_lower for tok in search_tokens):
+        if _is_drink_relevant_text(txt_lower, search_tokens):
             matching_reviews.append(txt.strip())
 
     if matching_reviews:
+        # Prefer a review that matches the most search tokens
+        matching_reviews.sort(
+            key=lambda r: sum(1 for tok in search_tokens if tok in r.lower()),
+            reverse=True,
+        )
         first = matching_reviews[0]
-        # Extract a concise snippet around the first matched token
         snippet = first[:110].rstrip() + ("…" if len(first) > 110 else "")
         for tok in search_tokens:
             idx = first.lower().find(tok)
@@ -206,7 +251,7 @@ def _extract_match_evidence(
         return f"Mentioned in {count} review{'s' if count > 1 else ''}: \"{snippet}\"", True
 
     editorial = ((place.get("editorialSummary") or {}).get("text") or "").strip()
-    if editorial and any(tok in editorial.lower() for tok in search_tokens):
+    if editorial and _is_drink_relevant_text(editorial.lower(), search_tokens):
         snippet = editorial[:110].rstrip() + ("…" if len(editorial) > 110 else "")
         return f"Profile: \"{snippet}\"", True
 
@@ -215,8 +260,7 @@ def _extract_match_evidence(
     if matched_in_name:
         return f"Specialty in name: {name}", True
 
-    label_map = {"tea_house": "tea house", "bar": "bar & lounge", "zero_proof": "zero-proof spot", "cafe": "café"}
-    return f"Nearby {label_map.get(venue_type, 'drink spot')}", False
+    return None, False
 
 
 def _search_places_new(
