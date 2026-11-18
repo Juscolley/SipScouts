@@ -9,7 +9,7 @@ import httpx
 
 from app import models
 from app.database import SessionLocal
-from app.services.distance import calculate_haversine_distance
+from app.services.distance import calculate_haversine_distance, attach_road_distances_km
 from app.services.text_utils import fold_latin_accents
 from app.services import (
     google_scraper,
@@ -347,8 +347,12 @@ async def orchestrate_search(
     for v in deduped:
         v.pop("_dist_mi", None)
 
-    # Scrape website HTML in parallel for official Instagram handles
-    await enrich_venues_with_instagram(deduped)
+    # Scrape website HTML in parallel for official Instagram handles and attach real road distances
+    await asyncio.gather(
+        enrich_venues_with_instagram(deduped),
+        attach_road_distances_km(lat, lon, deduped),
+    )
+    deduped.sort(key=lambda v: v.get("distance_km") if isinstance(v.get("distance_km"), (int, float)) else 99999.0)
 
     # Persist discovered venues to SQLite in background thread
     if deduped:

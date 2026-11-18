@@ -54,6 +54,7 @@ interface Venue {
   photo_url?: string | null
   evidence?: string | null
   match_tier?: 'exact' | 'potential'
+  distance_km?: number | null
   distanceKm?: number
 }
 
@@ -221,7 +222,10 @@ export default function DiscoverPage() {
       if (refLat && refLng) {
         setSearchCenter(newCenter)
         results = results
-          .map(v => ({ ...v, distanceKm: distanceKm(refLat, refLng, v.lat, v.lng) }))
+          .map(v => ({
+            ...v,
+            distanceKm: typeof v.distance_km === 'number' ? v.distance_km : distanceKm(refLat, refLng, v.lat, v.lng),
+          }))
           .filter(v => (v.distanceKm ?? 0) <= 88.6)
           .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
       }
