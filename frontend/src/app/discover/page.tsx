@@ -199,6 +199,26 @@ export default function DiscoverPage() {
       if (opts.locationVal.trim()) {
         params.set('zip_code', opts.locationVal.trim())
       } else {
+        // When Zip/City is left blank, ALWAYS try to get a fresh real GPS fix first (never fall back to profile ZIP)
+        if (geo.source !== 'gps' && typeof navigator !== 'undefined' && navigator.geolocation) {
+          const freshGps = await new Promise<{ lat: number; lng: number } | null>(resolve => {
+            navigator.geolocation.getCurrentPosition(
+              pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              () => {
+                navigator.geolocation.getCurrentPosition(
+                  pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                  () => resolve(null),
+                  { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+                )
+              },
+              { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
+            )
+          })
+          if (freshGps) {
+            activeLat = freshGps.lat
+            activeLng = freshGps.lng
+          }
+        }
         if (activeLat === null || activeLng === null) {
           try {
             const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json')
@@ -303,22 +323,10 @@ export default function DiscoverPage() {
     if (autoSearch && (urlDrink || urlIngredient)) {
       // Clean URL query params while preserving browser back button
       window.history.replaceState({}, '', '/discover')
-      let fallbackZip = urlZip
-      if (!fallbackZip.trim()) {
-        try {
-          const localRaw = localStorage.getItem('sipscouts_profile_v1')
-          if (localRaw) {
-            const parsed = JSON.parse(localRaw)
-            fallbackZip = parsed.zip_code ?? ''
-          }
-        } catch {
-          // Ignore
-        }
-      }
       executeSearch({
         drinkVal: urlDrink,
         ingredientVal: urlIngredient,
-        locationVal: fallbackZip,
+        locationVal: urlZip,
       })
       return
     }
@@ -944,7 +952,7 @@ export default function DiscoverPage() {
                       executeSearch({
                         drinkVal: favDrink,
                         ingredientVal: '',
-                        locationVal: locationInput.trim() || (geo.latitude !== null && geo.longitude !== null ? '' : memberProfile.zip_code.trim()),
+                        locationVal: locationInput.trim(),
                       })
                     }
                     style={{
@@ -970,7 +978,7 @@ export default function DiscoverPage() {
                       executeSearch({
                         drinkVal: '',
                         ingredientVal: favIng,
-                        locationVal: locationInput.trim() || (geo.latitude !== null && geo.longitude !== null ? '' : memberProfile.zip_code.trim()),
+                        locationVal: locationInput.trim(),
                       })
                     }
                     style={{

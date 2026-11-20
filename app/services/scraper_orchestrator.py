@@ -289,7 +289,10 @@ async def orchestrate_search(
     if cache_key in _SEARCH_CACHE:
         ts, cached_venues = _SEARCH_CACHE[cache_key]
         if now - ts < _SEARCH_CACHE_TTL and cached_venues:
-            return cached_venues
+            fresh_list = [dict(v) for v in cached_venues]
+            await attach_road_distances_km(lat, lon, fresh_list)
+            fresh_list.sort(key=lambda v: v.get("distance_km") if isinstance(v.get("distance_km"), (int, float)) else 99999.0)
+            return fresh_list
 
     # Start with any zero-drop database hits already discovered for this area
     collected: List[Dict] = _load_cached_db_venues(keywords, lat, lon)

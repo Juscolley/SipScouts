@@ -82,7 +82,7 @@ export function useGeolocation(): GeoLocation {
           )
           return
         }
-        // Stage 2: Fast low-accuracy network fallback (4s timeout)
+        // Stage 2: Fast low-accuracy network fallback (5s timeout, max 60s cache)
         navigator.geolocation.getCurrentPosition(
           pos => {
             setState({
@@ -100,10 +100,10 @@ export function useGeolocation(): GeoLocation {
               userInitiated
             )
           },
-          { enableHighAccuracy: false, timeout: 4000, maximumAge: 600000 }
+          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
         )
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     )
   }, [fetchIpFallback])
 
