@@ -9,6 +9,8 @@ export type VenueActionType =
   | 'share_venue'
   | 'share_badge'
   | 'share_app'
+  | 'referral_claim'
+  | 'utm_visit'
 
 export interface TrackVenueActionInput {
   venue_name: string
@@ -81,5 +83,44 @@ export function getLocalVenueClicksBackup(): Array<TrackVenueActionInput & { dev
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
+  }
+}
+
+const CLAIMED_REF_KEY = 'sipscouts_claimed_ref_v1'
+const SESSION_UTM_KEY = 'sipscouts_session_utm_v1'
+
+export function captureUtmAndReferral(currentUserId?: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const utmSource = (params.get('utm_source') || '').trim()
+    const utmCampaign = (params.get('utm_campaign') || params.get('utm_medium') || '').trim()
+    const cid = (params.get('cid') || '').trim()
+    const ref = (params.get('ref') || '').trim()
+
+    if ((utmSource || cid) && !sessionStorage.getItem(SESSION_UTM_KEY)) {
+      sessionStorage.setItem(SESSION_UTM_KEY, `${utmSource}|${cid}`)
+      trackVenueAction({
+        venue_name: '__UTM_VISIT__',
+        action_type: 'utm_visit',
+        searched_drink: utmSource || cid,
+        searched_ingredient: cid || utmCampaign,
+        city: utmCampaign || utmSource,
+        user_id: currentUserId ?? null,
+      })
+    }
+
+    if (ref && ref !== currentUserId && !localStorage.getItem(CLAIMED_REF_KEY)) {
+      localStorage.setItem(CLAIMED_REF_KEY, ref)
+      trackVenueAction({
+        venue_name: '__REFERRAL__',
+        action_type: 'referral_claim',
+        searched_drink: ref,
+        city: utmSource || 'invite',
+        user_id: currentUserId ?? null,
+      })
+    }
+  } catch {
+    // Ignore storage/URL errors
   }
 }

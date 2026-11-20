@@ -30,7 +30,7 @@ import {
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 import { useBookmarks } from '@/hooks/useBookmarks'
 import { createClient } from '@/lib/supabase'
-import { trackVenueAction } from '@/lib/analytics'
+import { trackVenueAction, captureUtmAndReferral } from '@/lib/analytics'
 import NotificationBell from '@/components/NotificationBell'
 import InstallAppButton from '@/components/InstallAppButton'
 import FeedbackModal from '@/components/FeedbackModal'
@@ -302,6 +302,11 @@ export default function DiscoverPage() {
     }
   }
 
+  // Capture any ?utm_source=, ?cid=, or ?ref= attribution on load
+  useEffect(() => {
+    captureUtmAndReferral(userId)
+  }, [userId])
+
   // Pre-warm the Render backend the instant the page opens (and keep it warm while the tab is open)
   useEffect(() => {
     const warmBackend = () => {
@@ -449,6 +454,8 @@ export default function DiscoverPage() {
     if (v.instagram_url) shareParams.set('ig', v.instagram_url)
     if (v.website) shareParams.set('website', v.website)
     if (v.phone) shareParams.set('phone', v.phone)
+    if (userId) shareParams.set('ref', userId)
+    shareParams.set('utm_source', 'invite_venue')
 
     const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
     const streetName = v.address ? v.address.split(',')[0].trim() : ''

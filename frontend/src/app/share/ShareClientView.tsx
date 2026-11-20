@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { trackVenueAction } from '@/lib/analytics'
+import { useState, useMemo, useEffect } from 'react'
+import { trackVenueAction, captureUtmAndReferral } from '@/lib/analytics'
 import { useGeolocation, distanceKm } from '@/hooks/useGeolocation'
 
 interface ShareClientProps {
@@ -50,6 +50,10 @@ export default function ShareClientView({
 }: ShareClientProps) {
   const [copied, setCopied] = useState(false)
   const geo = useGeolocation()
+
+  useEffect(() => {
+    captureUtmAndReferral()
+  }, [])
 
   const liveDistanceMiles = useMemo(() => {
     if (

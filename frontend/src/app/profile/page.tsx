@@ -126,7 +126,10 @@ export default function ProfilePage() {
   const [hasExistingProfile, setHasExistingProfile] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [badgeCopied, setBadgeCopied] = useState(false)
+  const [referralCount, setReferralCount] = useState(0)
   const { bookmarks, toggle, userId, isAdmin } = useBookmarks()
+  const isVipUnlocked = referralCount >= 3
+  const effectiveMaxFavorites = isVipUnlocked ? 25 : MAX_FAVORITES
 
   const earnedBadgeName =
     bookmarks.length >= 3
@@ -166,6 +169,8 @@ export default function ProfilePage() {
     shareParams.set('scout', scoutName)
     shareParams.set('drink', sipDnaSummary)
     if (profile.zip_code.trim()) shareParams.set('city', profile.zip_code.trim())
+    if (userId) shareParams.set('ref', userId)
+    shareParams.set('utm_source', 'badge_share')
 
     const shareUrl = `${window.location.origin}/share?${shareParams.toString()}`
     const shareText = `🏅 I unlocked the "${earnedBadgeName}" badge on SipScouts! My Sip DNA: ${sipDnaSummary}. Tap to see my badge & claim yours:`
@@ -252,6 +257,15 @@ export default function ProfilePage() {
       }
 
       supabase
+        .from('venue_clicks')
+        .select('id', { count: 'exact', head: true })
+        .eq('action_type', 'referral_claim')
+        .eq('searched_drink', user.id)
+        .then(({ count }) => {
+          if (typeof count === 'number') setReferralCount(count)
+        })
+
+      supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
@@ -308,8 +322,8 @@ export default function ProfilePage() {
     setSaving(true)
 
     // Automatically merge any un-added text still sitting in the Drink or Ingredient input boxes!
-    const finalDrinks = mergeTags(profile.favorite_drinks, pendingDrinkInput, MAX_FAVORITES)
-    const finalIngredients = mergeTags(profile.favorite_ingredients, pendingIngredientInput, MAX_FAVORITES)
+    const finalDrinks = mergeTags(profile.favorite_drinks, pendingDrinkInput, effectiveMaxFavorites)
+    const finalIngredients = mergeTags(profile.favorite_ingredients, pendingIngredientInput, effectiveMaxFavorites)
     setPendingDrinkInput('')
     setPendingIngredientInput('')
 
@@ -594,15 +608,15 @@ export default function ProfilePage() {
                   <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(226, 114, 91, 0.06)', border: '1px solid rgba(226, 114, 91, 0.2)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '1.4rem' }}>🥉</div>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', background: 'rgba(0,0,0,0.05)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
-                        🔒 Locked (0/3)
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: referralCount >= 1 ? '#2E6F40' : 'var(--text-muted)', background: referralCount >= 1 ? 'rgba(46, 111, 64, 0.14)' : 'rgba(0,0,0,0.05)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
+                        {referralCount >= 1 ? '✅ Unlocked!' : `🔒 Locked (${referralCount}/1)`}
                       </span>
                     </div>
                     <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', marginTop: '0.35rem' }}>
                       Local Pioneer
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.1rem' }}>
-                      Unlock by inviting 3 friends
+                      Unlock free by inviting 1 friend
                     </div>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0 }}>
                       Unlocks custom Bronze Pioneer badge on your profile and search cards.
@@ -613,18 +627,18 @@ export default function ProfilePage() {
                   <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(255, 215, 0, 0.12)', border: '1.5px solid rgba(218, 165, 32, 0.6)', position: 'relative' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '1.4rem' }}>🥇</div>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#B8860B', background: 'rgba(218, 165, 32, 0.2)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
-                        🔒 Locked (0/5)
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: isVipUnlocked ? '#2E6F40' : '#B8860B', background: isVipUnlocked ? 'rgba(46, 111, 64, 0.16)' : 'rgba(218, 165, 32, 0.2)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
+                        {isVipUnlocked ? '✅ Unlocked!' : `🔒 Locked (${referralCount}/3)`}
                       </span>
                     </div>
                     <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', marginTop: '0.35rem' }}>
                       Gold Scout VIP
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#B8860B', fontWeight: 700, marginTop: '0.1rem' }}>
-                      Unlock by inviting 5 friends (or $1.99/mo)
+                      Unlock Free by inviting 3 friends
                     </div>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-main)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0, fontWeight: 500 }}>
-                      Unlimited craving alerts, secret menu notes &amp; Gold Aardvark badge!
+                      Expanded Drink Radar (up to 25 spots), secret menu notes &amp; Gold Aardvark badge!
                     </p>
                   </div>
 
@@ -632,15 +646,15 @@ export default function ProfilePage() {
                   <div style={{ padding: '1rem', borderRadius: 14, background: 'rgba(106, 27, 154, 0.06)', border: '1px solid rgba(106, 27, 154, 0.25)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '1.4rem' }}>👑</div>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', background: 'rgba(0,0,0,0.05)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
-                        🔒 Locked (0/10)
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: referralCount >= 10 ? '#2E6F40' : 'var(--text-muted)', background: referralCount >= 10 ? 'rgba(46, 111, 64, 0.14)' : 'rgba(0,0,0,0.05)', padding: '0.15rem 0.45rem', borderRadius: 6 }}>
+                        {referralCount >= 10 ? '✅ Unlocked!' : `🔒 Locked (${referralCount}/10)`}
                       </span>
                     </div>
                     <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', marginTop: '0.35rem' }}>
                       Founding Tastemaker
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#6A1B9A', fontWeight: 700, marginTop: '0.1rem' }}>
-                      Unlock by inviting 10 friends
+                      Unlock free by inviting 10 friends
                     </div>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '0.35rem', lineHeight: 1.35, margin: 0 }}>
                       Top community influencer rank, permanent VIP pass &amp; priority drink submissions.
@@ -888,17 +902,19 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* Favorites (Capped at 5 each) */}
+                  {/* Favorites */}
                   <div className="glass" style={{ padding: '1.75rem', borderRadius: 20, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <h2 className="section-title">Your Favorites (Up to 5 Each)</h2>
+                    <h2 className="section-title">
+                      Your Favorites (Up to {effectiveMaxFavorites} Each{isVipUnlocked ? ' · 🥇 VIP Unlocked' : ''})
+                    </h2>
                     <TagInput
-                      label="Favorite Drinks (Up to 5)"
+                      label={`Favorite Drinks (Up to ${effectiveMaxFavorites})`}
                       values={profile.favorite_drinks}
                       onChange={v => setProfile({ ...profile, favorite_drinks: v })}
                       pendingInput={pendingDrinkInput}
                       onPendingInputChange={setPendingDrinkInput}
                       placeholder="e.g. Phony Negroni, Oat Latte, Matcha, Espresso Martini…"
-                      maxItems={5}
+                      maxItems={effectiveMaxFavorites}
                     />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '-0.5rem', marginBottom: '0.35rem' }}>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Popular:</span>
@@ -907,7 +923,7 @@ export default function ProfilePage() {
                           key={d}
                           type="button"
                           onClick={() => {
-                            if (!profile.favorite_drinks.includes(d) && profile.favorite_drinks.length < 5) {
+                            if (!profile.favorite_drinks.includes(d) && profile.favorite_drinks.length < effectiveMaxFavorites) {
                               setProfile(prev => ({ ...prev, favorite_drinks: [...prev.favorite_drinks, d] }))
                             }
                           }}
@@ -926,13 +942,13 @@ export default function ProfilePage() {
                       ))}
                     </div>
                     <TagInput
-                      label="Favorite Ingredients (Up to 5)"
+                      label={`Favorite Ingredients (Up to ${effectiveMaxFavorites})`}
                       values={profile.favorite_ingredients}
                       onChange={v => setProfile({ ...profile, favorite_ingredients: v })}
                       pendingInput={pendingIngredientInput}
                       onPendingInputChange={setPendingIngredientInput}
                       placeholder="e.g. Seedlip, Cardamom, Yuzu, Pistachio, Lavender…"
-                      maxItems={5}
+                      maxItems={effectiveMaxFavorites}
                     />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '-0.5rem', marginBottom: '0.35rem' }}>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Popular:</span>
@@ -941,7 +957,7 @@ export default function ProfilePage() {
                           key={ing}
                           type="button"
                           onClick={() => {
-                            if (!profile.favorite_ingredients.includes(ing) && profile.favorite_ingredients.length < 5) {
+                            if (!profile.favorite_ingredients.includes(ing) && profile.favorite_ingredients.length < effectiveMaxFavorites) {
                               setProfile(prev => ({ ...prev, favorite_ingredients: [...prev.favorite_ingredients, ing] }))
                             }
                           }}

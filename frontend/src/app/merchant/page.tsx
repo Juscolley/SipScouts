@@ -233,7 +233,11 @@ export default function MerchantDashboard() {
           ? '🏅 Scout Badge & Sip DNA Shares'
           : c.venue_name === '__APP_SHARE__'
             ? '📲 SipScouts App Shares'
-            : c.venue_name
+            : c.venue_name === '__UTM_VISIT__'
+              ? `🔗 UTM / Source Visit (${c.searched_drink || 'direct'})`
+              : c.venue_name === '__REFERRAL__'
+                ? '🤝 Friend Referral Claims'
+                : c.venue_name
       if (!leadMap[vName]) {
         leadMap[vName] = {
           venue_name: vName,
