@@ -75,6 +75,7 @@ interface Venue {
   evidence?: string | null
   match_tier?: 'exact' | 'potential'
   distance_km?: number | null
+  distance_mode?: 'driving' | 'straight_line'
   distanceKm?: number
 }
 
@@ -140,6 +141,7 @@ export default function DiscoverPage() {
   const [ingredient, setIngredient] = useState('')
   const [locationInput, setLocationInput] = useState('')
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number } | null>(null)
+  const [searchOriginMode, setSearchOriginMode] = useState<'gps' | 'ip' | 'zip'>('gps')
   const [venues, setVenues] = useState<Venue[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -195,9 +197,11 @@ export default function DiscoverPage() {
 
       let activeLat = geo.latitude
       let activeLng = geo.longitude
+      let originMode: 'gps' | 'ip' | 'zip' = geo.source === 'gps' ? 'gps' : 'ip'
 
       if (opts.locationVal.trim()) {
         params.set('zip_code', opts.locationVal.trim())
+        originMode = 'zip'
       } else {
         // When Zip/City is left blank, ALWAYS try to get a fresh real GPS fix first (never fall back to profile ZIP)
         if (geo.source !== 'gps' && typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -217,6 +221,7 @@ export default function DiscoverPage() {
           if (freshGps) {
             activeLat = freshGps.lat
             activeLng = freshGps.lng
+            originMode = 'gps'
           }
         }
         if (activeLat === null || activeLng === null) {
@@ -229,6 +234,7 @@ export default function DiscoverPage() {
               if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
                 activeLat = parsedLat
                 activeLng = parsedLng
+                originMode = 'ip'
               }
             }
           } catch {
@@ -240,6 +246,7 @@ export default function DiscoverPage() {
           params.set('lng', String(activeLng))
         }
       }
+      setSearchOriginMode(originMode)
 
       let data: { venues?: Venue[]; center?: { lat?: number; lng?: number } } = {}
       let attempt = 0
@@ -1303,7 +1310,11 @@ export default function DiscoverPage() {
 
                           {v.distanceKm !== undefined && (
                             <p className="distance" style={{ fontWeight: 600, fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                              {formatDistance(v.distanceKm)}
+                              {searchOriginMode === 'ip'
+                                ? `~${formatDistance(v.distanceKm)} (approx. area)`
+                                : v.distance_mode === 'straight_line' || typeof v.distance_km !== 'number'
+                                ? `~${formatDistance(v.distanceKm)} (straight-line)`
+                                : formatDistance(v.distanceKm)}
                             </p>
                           )}
                           <p style={{ fontSize: '0.84rem', color: 'var(--text-light)', marginTop: '0.15rem', lineHeight: 1.4 }}>

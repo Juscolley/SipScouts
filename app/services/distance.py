@@ -50,7 +50,7 @@ async def attach_road_distances_km(origin_lat: float, origin_lon: float, venues:
     road_meters: Optional[List[Optional[float]]] = None
 
     try:
-        async with httpx.AsyncClient(timeout=2.5) as client:
+        async with httpx.AsyncClient(timeout=4.5) as client:
             resp = await client.get(url)
             if resp.status_code == 200:
                 data = resp.json()
@@ -64,8 +64,10 @@ async def attach_road_distances_km(origin_lat: float, origin_lon: float, venues:
         meters = road_meters[idx] if (road_meters is not None and idx < len(road_meters)) else None
         if isinstance(meters, (int, float)) and meters >= 0:
             v["distance_km"] = round(float(meters) / 1000.0, 3)
+            v["distance_mode"] = "driving"
         else:
             v["distance_km"] = round(
                 calculate_haversine_distance(origin_lat, origin_lon, float(v["lat"]), float(v["lng"])) * 1.609344,
                 3,
             )
+            v["distance_mode"] = "straight_line"
