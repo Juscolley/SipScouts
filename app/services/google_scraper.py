@@ -94,11 +94,33 @@ _ACCENT_TWINS = {
 
 
 _DRINK_SYNONYMS = {
-    "hojicha": '(hojicha OR "roasted green tea")',
+    "hojicha": '(hojicha OR "roasted green tea" OR houjicha)',
+    "houjicha": '(hojicha OR "roasted green tea" OR houjicha)',
     "seedlip": '(seedlip OR "non-alcoholic spirit" OR "zero-proof")',
-    "phony negroni": '("phony negroni" OR "non-alcoholic negroni" OR "zero-proof negroni")',
-    "zero-proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic")',
-    "zero proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic")',
+    "phony negroni": '("phony negroni" OR "non-alcoholic negroni" OR "zero-proof negroni" OR "n/a negroni")',
+    "zero-proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic" OR "spirit-free")',
+    "zero proof": '("zero-proof" OR "zero proof" OR mocktail OR "non-alcoholic" OR "spirit-free")',
+    "mocktail": '(mocktail OR "zero-proof" OR "zero proof" OR "non-alcoholic" OR "spirit-free")',
+    "genmaicha": '(genmaicha OR "brown rice green tea")',
+    "london fog": '("london fog" OR "earl grey latte")',
+    "espresso tonic": '("espresso tonic" OR "espresso & tonic")',
+    "cortado": '(cortado OR gibraltar)',
+    "dubai chocolate": '("dubai chocolate" OR "pistachio kataifi" OR "pistachio kunafa")',
+    "yuzu": '(yuzu OR "japanese citrus")',
+    "ghia": '(ghia OR "non-alcoholic aperitif" OR "zero-proof aperitif")',
+}
+
+# Equivalent phrases used when scanning review/editorial text for drink evidence
+_EVIDENCE_SYNONYMS: Dict[str, tuple[str, ...]] = {
+    "hojicha": ("hojicha", "houjicha", "roasted green tea"),
+    "houjicha": ("hojicha", "houjicha", "roasted green tea"),
+    "seedlip": ("seedlip", "non-alcoholic spirit", "zero-proof", "zero proof"),
+    "phony": ("phony negroni", "non-alcoholic negroni", "zero-proof negroni", "n/a negroni"),
+    "zero-proof": ("zero-proof", "zero proof", "mocktail", "non-alcoholic", "spirit-free"),
+    "mocktail": ("mocktail", "zero-proof", "zero proof", "non-alcoholic", "spirit-free"),
+    "genmaicha": ("genmaicha", "brown rice green tea"),
+    "cortado": ("cortado", "gibraltar"),
+    "ghia": ("ghia", "non-alcoholic aperitif", "zero-proof aperitif"),
 }
 
 
@@ -156,15 +178,24 @@ def _classify_venue_type(
     bar_types = {"bar", "cocktail_bar", "wine_bar", "pub", "night_club", "lounge", "brewery", "distillery", "liquor_store"}
     tea_types = {"tea_house", "bubble_tea_store"}
     cafe_types = {"cafe", "coffee_shop", "bakery", "ice_cream_shop", "dessert_shop", "juice_shop"}
+    has_tea_name = bool(re.search(r"\b(tea|matcha|boba|chai)\b", name_lower))
 
-    if pt in tea_types or (not (pt in bar_types) and (tset & tea_types or any(w in name_lower for w in ("tea", "matcha", "boba", "chai")))):
+    # 1. Explicit primaryType from Google Places takes precedence
+    if pt in tea_types:
         return "tea_house"
     if pt in bar_types:
         return "zero_proof" if is_mocktail_query and "zero" in name_lower else "bar"
     if pt in cafe_types:
+        # A coffee shop/cafe whose name explicitly centers on tea/matcha/boba (e.g., "Matcha Cafe Maiko") is a tea_house
+        if has_tea_name and "coffee" not in name_lower:
+            return "tea_house"
         return "cafe"
+
+    # 2. Fallback to secondary types / name only when primaryType is generic (e.g., "restaurant" or missing)
     if tset & bar_types and not (tset & cafe_types):
         return "zero_proof" if is_mocktail_query and "zero" in name_lower else "bar"
+    if has_tea_name or (tset & tea_types and not (tset & cafe_types) and "coffee" not in name_lower and "dumpling" not in name_lower):
+        return "tea_house"
     if is_mocktail_query and ("zero" in name_lower or "mocktail" in name_lower or "kava" in name_lower):
         return "zero_proof"
     return "cafe"
@@ -185,12 +216,21 @@ _BEVERAGE_CONTEXT = (
 )
 
 
+def _token_variants(tok: str) -> tuple[str, ...]:
+    """Returns the token plus any known drink/ingredient synonym variants."""
+    return _EVIDENCE_SYNONYMS.get(tok, (tok,))
+
+
+def _token_in_text(tok: str, txt_lower: str) -> bool:
+    return any(v in txt_lower for v in _token_variants(tok))
+
+
 def _is_drink_relevant_text(txt_lower: str, search_tokens: List[str]) -> bool:
     """
     Returns True if text genuinely matches all searched drink/ingredient terms in a beverage context
     (and rejects food-only hits like 'blueberry muffin' or partial single-term hits when 2+ terms were searched).
     """
-    matched = [tok for tok in search_tokens if tok in txt_lower]
+    matched = [tok for tok in search_tokens if _token_in_text(tok, txt_lower)]
     if not matched:
         return False
 
@@ -200,22 +240,35 @@ def _is_drink_relevant_text(txt_lower: str, search_tokens: List[str]) -> bool:
             return False
         # Verify none of the matched tokens only appear inside food phrases (e.g. 'blueberry muffin')
         for tok in search_tokens:
-            food_pattern = re.compile(
-                r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
-            )
-            cleaned = food_pattern.sub("", txt_lower)
-            if tok not in cleaned:
+            variants = _token_variants(tok)
+            found_non_food = False
+            for v in variants:
+                if v not in txt_lower:
+                    continue
+                food_pattern = re.compile(
+                    r"\b" + re.escape(v) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
+                )
+                cleaned = food_pattern.sub("", txt_lower)
+                if v in cleaned:
+                    found_non_food = True
+                    break
+            if not found_non_food:
                 return False
         return True
 
     # Single-token search: reject food-only hits without beverage context
     tok = matched[0]
     has_beverage_ctx = any(b in txt_lower for b in _BEVERAGE_CONTEXT)
-    food_pattern = re.compile(
-        r"\b" + re.escape(tok) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
-    )
-    cleaned = food_pattern.sub("", txt_lower)
-    return tok in cleaned and (has_beverage_ctx or len(search_tokens) == 1)
+    for v in _token_variants(tok):
+        if v not in txt_lower:
+            continue
+        food_pattern = re.compile(
+            r"\b" + re.escape(v) + r"\s+(" + "|".join(_FOOD_FOLLOWERS) + r")\b"
+        )
+        cleaned = food_pattern.sub("", txt_lower)
+        if v in cleaned and (has_beverage_ctx or len(search_tokens) == 1):
+            return True
+    return False
 
 
 def _extract_match_evidence(
@@ -263,9 +316,13 @@ def _extract_match_evidence(
         return f"Profile: \"{snippet}\"", True
 
     name_lower = (name or "").lower()
-    matched_in_name = [tok for tok in search_tokens if tok in name_lower]
+    matched_in_name = [tok for tok in search_tokens if _token_in_text(tok, name_lower)]
     if matched_in_name:
-        return f"Specialty in name: {name}", True
+        if len(matched_in_name) == len(search_tokens):
+            return f"Specialty in name: {name}", True
+        matched_str = ", ".join(m.capitalize() for m in matched_in_name)
+        unconfirmed_str = ", ".join(t for t in search_tokens if t not in matched_in_name)
+        return f"{matched_str} specialist; {unconfirmed_str} not confirmed", False
 
     return None, False
 
@@ -461,7 +518,7 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     try:
         exact_results = _search_places_new(api_key, exact_query, lat, lon, radius_m=50000.0, raw_keywords=kw_clean)
         for r in exact_results:
-            r["match_tier"] = "exact"
+            r["match_tier"] = "exact" if (not kw_clean or r.get("has_strong_evidence")) else "potential"
             seen_ids.add(r["id"])
             collected.append(r)
     except Exception as e:
@@ -486,7 +543,7 @@ def _run_sync_google_search(keywords: str, lat: float, lon: float) -> List[Dict]
     try:
         legacy = _search_places_legacy(api_key, search_query, lat, lon)
         for r in legacy:
-            r["match_tier"] = "exact"
+            r["match_tier"] = "potential" if kw_clean else "exact"
         return legacy
     except Exception as e:
         logger.warning(f"Google Places scraper error: {e}")

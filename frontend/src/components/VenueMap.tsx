@@ -83,16 +83,18 @@ function MapViewportUpdater({
         .map(v => [v.lat, v.lng])
 
       if (points.length > 0) {
-        // Include user marker only if it's near the search results (within ~1 degree)
+        // Start zoomed in on the closest results so distant outliers don't collapse nearby pins into one cluster
+        const focusPoints = points.slice(0, 6)
+        // Include user marker only if it's near the closest search results (within ~0.35 degrees)
         if (
           userLat !== undefined &&
           userLng !== undefined &&
-          Math.abs(userLat - points[0][0]) < 1 &&
-          Math.abs(userLng - points[0][1]) < 1
+          Math.abs(userLat - focusPoints[0][0]) < 0.35 &&
+          Math.abs(userLng - focusPoints[0][1]) < 0.35
         ) {
-          points.push([userLat, userLng])
+          focusPoints.push([userLat, userLng])
         }
-        const bounds = L.latLngBounds(points)
+        const bounds = L.latLngBounds(focusPoints)
         map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 })
         return
       }

@@ -192,7 +192,7 @@ def _deduplicate_and_merge(venues: List[Dict]) -> List[Dict]:
                 existing["evidence"] = v["evidence"]
             if existing.get("type") == "cafe" and v.get("type") in ("tea_house", "zero_proof", "bar"):
                 existing["type"] = v["type"]
-            if v.get("match_tier") == "exact":
+            if v.get("match_tier") == "exact" and (existing.get("evidence") or v.get("evidence")):
                 existing["match_tier"] = "exact"
     return list(by_key.values())
 
@@ -248,6 +248,7 @@ def _load_cached_db_venues(keyword: str, lat: float, lon: float, radius_km: floa
                 found = fold_latin_accents(c.found_drinks or "").lower()
                 cname = fold_latin_accents(c.name or "").lower()
                 if not kw_lower or kw_lower in found or kw_lower in cname:
+                    in_found = bool(kw_lower and kw_lower in found)
                     results.append(
                         {
                             "id": f"db-{c.id}",
@@ -257,6 +258,8 @@ def _load_cached_db_venues(keyword: str, lat: float, lon: float, radius_km: floa
                             "lat": float(c.latitude),
                             "lng": float(c.longitude),
                             "tags": [t for t in [keyword, "Verified Local Spot"] if t],
+                            "evidence": f"Previously scouted for {keyword}" if in_found else None,
+                            "match_tier": "exact" if (not kw_lower or in_found) else "potential",
                             "source": "cache",
                         }
                     )
@@ -365,6 +368,8 @@ async def orchestrate_search(
 
     for v in deduped:
         v.pop("_dist_mi", None)
+        if keywords and v.get("match_tier") == "exact" and not v.get("evidence"):
+            v["match_tier"] = "potential"
 
     # Scrape website HTML in parallel for official Instagram handles and attach real road distances
     await asyncio.gather(
