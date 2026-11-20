@@ -527,7 +527,9 @@ export default function DiscoverPage() {
   }
 
   async function handleShareApp() {
-    const shareUrl = `${window.location.origin}/?ref=share`
+    const shareUrl = userId
+      ? `${window.location.origin}/discover?ref=${encodeURIComponent(userId)}&utm_source=share_app`
+      : `${window.location.origin}/discover?utm_source=share_app`
     const shareTitle = 'SipScouts — Find Your Next Perfect Sip'
     const shareText =
       '🥂 Check out SipScouts — find hidden-gem coffee, tea, craft cocktails, and zero-proof mocktail spots near you!'
